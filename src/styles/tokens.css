@@ -1,0 +1,30 @@
+:root{
+  /* Core palette (premium rasta-ish, not кислотно) */
+  --bg: 15 15 16;
+  --card: 24 24 26;
+  --text: 245 245 245;
+  --muted: 170 170 175;
+
+  --orange: 255 122 24;
+  --green: 39 194 106;
+  --yellow: 255 210 63;
+  --danger: 255 64 64;
+
+  /* Radii */
+  --r-xl: 16px;
+  --r-2xl: 22px;
+  --r-3xl: 28px;
+
+  /* Shadows */
+  --shadow-soft: 0 10px 30px rgba(0,0,0,.35);
+  --shadow-glow: 0 0 0 1px rgba(255,255,255,.08), 0 18px 60px rgba(0,0,0,.45);
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --t-fast: 140ms;
+  --t: 220ms;
+
+  /* Z */
+  --z-header: 40;
+  --z-modal: 60;
+}
