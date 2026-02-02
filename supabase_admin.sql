@@ -57,9 +57,15 @@ create or replace function public.current_role()
 returns app_role
 language sql
 stable
+security definer
+set search_path = public, auth
 as $$
-  select coalesce((select role from public.profiles where user_id = auth.uid()), 'guest'::app_role);
+  select coalesce(
+    (select role from public.profiles where user_id = auth.uid()),
+    'guest'::app_role
+  );
 $$;
+alter function public.current_role() owner to supabase_admin;
 
 -- 6) trigger: create profile on signup
 create or replace function public.handle_new_user()
@@ -176,4 +182,3 @@ with check (
 -- values
 --   (auth.uid(), 'NEW', 990, 'Тест', '+7 900 000-00-00', 'Юности 45', 'без лука'),
 --   (auth.uid(), 'COOKING', 1290, 'Тест 2', '+7 900 000-00-01', 'Юности 45', 'остро');
-
