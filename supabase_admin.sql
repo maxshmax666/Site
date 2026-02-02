@@ -59,6 +59,7 @@ language sql
 stable
 security definer
 set search_path = public, auth
+set row_security = off
 as $$
   select coalesce(
     (select role from public.profiles where user_id = auth.uid()),
