@@ -15,6 +15,7 @@ export function LoginPage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const refreshRole = useAuthStore((s) => s.refreshRole);
 
   const [mode, setMode] = useState<"login" | "signup">("login");
   const title = useMemo(() => (mode === "login" ? "Вход" : "Регистрация"), [mode]);
@@ -24,6 +25,10 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+
+  const hasSupabaseEnv = Boolean(
+    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
+  );
 
   if (!loading && user) {
     // уже залогинен
@@ -46,20 +51,29 @@ export function LoginPage() {
     setError(null);
     setOk(null);
     try {
+      if (!hasSupabaseEnv) {
+        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+      }
       if (!email || !password) throw new Error("Введите email и пароль.");
       if (password.length < 6) throw new Error("Пароль минимум 6 символов.");
 
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        await refreshRole();
         nav("/profile");
       } else {
         // Важно: если включено подтверждение email, пользователь увидит сообщение
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
 
         // Если email confirmation включён — сессии может не быть сразу
-        setOk("Проверь почту: мы отправили письмо для подтверждения (если включено в настройках).");
+        if (data.session) {
+          await refreshRole();
+          nav("/profile");
+        } else {
+          setOk("Проверь почту: мы отправили письмо для подтверждения (если включено в настройках).");
+        }
       }
     } catch (e) {
       setError(prettifyError(e));
@@ -73,6 +87,9 @@ export function LoginPage() {
     setError(null);
     setOk(null);
     try {
+      if (!hasSupabaseEnv) {
+        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
