@@ -18,6 +18,7 @@ create table if not exists public.profiles (
   role app_role not null default 'guest',
   created_at timestamptz not null default now()
 );
+alter table public.profiles owner to supabase_admin;
 
 -- 3) orders table
 do $$
@@ -67,6 +68,22 @@ as $$
   );
 $$;
 alter function public.current_role() owner to supabase_admin;
+
+-- 5.1) helper: current user's role without triggering profiles RLS
+create or replace function public.current_role_unrestricted()
+returns app_role
+language sql
+stable
+security definer
+set search_path = public, auth
+set row_security = off
+as $$
+  select coalesce(
+    (select role from public.profiles where user_id = auth.uid()),
+    'guest'::app_role
+  );
+$$;
+alter function public.current_role_unrestricted() owner to supabase_admin;
 
 -- 6) trigger: create profile on signup
 create or replace function public.handle_new_user()
@@ -129,14 +146,14 @@ drop policy if exists "profiles_admin_read_all" on public.profiles;
 create policy "profiles_admin_read_all"
 on public.profiles
 for select
-using (public.current_role() in ('admin','engineer','manager'));
+using (public.current_role_unrestricted() in ('admin','engineer','manager'));
 
 drop policy if exists "profiles_admin_update_roles" on public.profiles;
 create policy "profiles_admin_update_roles"
 on public.profiles
 for update
-using (public.current_role() in ('admin','engineer'))
-with check (public.current_role() in ('admin','engineer'));
+using (public.current_role_unrestricted() in ('admin','engineer'))
+with check (public.current_role_unrestricted() in ('admin','engineer'));
 
 -- Orders policies:
 -- customers can create their own orders
