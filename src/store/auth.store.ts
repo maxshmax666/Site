@@ -53,8 +53,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     // 3) subscribe
-    supabase.auth.onAuthStateChange(async (_event, session2) => {
+    supabase.auth.onAuthStateChange(async (event, session2) => {
       set({ session: session2 ?? null, user: session2?.user ?? null, loading: false });
+
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.assign("/reset-password");
+      }
 
       if (session2?.user) {
         const role = await fetchRole();
