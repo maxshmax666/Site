@@ -1,0 +1,10 @@
+{
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/*.css",
+    "/*.js",
+    "/*.map",
+    "/favicon.ico"
+  ]
+}

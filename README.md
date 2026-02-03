@@ -15,7 +15,19 @@ npm run preview
 ## Cloudflare Pages (SPA)
 - Build command: `npm run build`
 - Output directory: `dist`
-- Для SPA-роутинга добавь файл `public/_redirects` со строкой:
-  `/* /index.html 200`
+- Для SPA-роутинга используется `_routes.json` (а не `_redirects`).
+  `_redirects` на Pages конфликтует с HTML-нормализацией (strip `.html`/`/index`) и может приводить к loop, поэтому применяем нативный механизм маршрутизации.
 
-(Файл уже добавлен в этот проект.)
+Пример `public/_routes.json`:
+```json
+{
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/*.css",
+    "/*.js",
+    "/*.map",
+    "/favicon.ico"
+  ]
+}
+```
