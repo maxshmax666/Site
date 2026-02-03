@@ -9,8 +9,12 @@ export function PizzaCard({ item }: { item: MenuItem }) {
 
   return (
     <div className="rounded-3xl bg-card border border-white/10 shadow-soft overflow-hidden">
-      <div className="h-36 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-        <div className="text-4xl">🍕</div>
+      <div className="h-36 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
+        {item.image ? (
+          <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="text-4xl">🍕</div>
+        )}
       </div>
       <div className="p-5">
         <div className="flex items-center gap-2">

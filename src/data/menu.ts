@@ -1,4 +1,4 @@
-export type MenuCategory = "pizza" | "snacks" | "drinks" | "desserts" | "sauces";
+export type MenuCategory = "pizza" | "snacks" | "drinks" | "desserts" | "other";
 
 export type MenuItem = {
   id: string;
@@ -15,7 +15,7 @@ export const categories: Array<{ key: MenuCategory; label: string }> = [
   { key: "snacks", label: "Закуски" },
   { key: "drinks", label: "Напитки" },
   { key: "desserts", label: "Десерты" },
-  { key: "sauces", label: "Соусы" },
+  { key: "other", label: "Другое" },
 ];
 
 export const menu: MenuItem[] = [
@@ -32,5 +32,5 @@ export const menu: MenuItem[] = [
 
   { id: "ds1", category: "desserts", title: "Десерт №1", desc: "Печенье / чизкейк", priceFrom: 179 },
 
-  { id: "sc1", category: "sauces", title: "Соус №1", desc: "Чесночный / сырный", priceFrom: 49 },
+  { id: "sc1", category: "other", title: "Соус №1", desc: "Чесночный / сырный", priceFrom: 49 },
 ];
