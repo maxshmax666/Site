@@ -12,6 +12,13 @@ const rank: Record<AppRole, number> = {
   admin: 4,
 };
 
+function formatRoleError(error: { code?: string; message?: string }) {
+  if (error.code === "PGRST116") {
+    return "Нет строки в profiles для текущего пользователя. Нужен backfill/триггер.";
+  }
+  return error.message ?? "Не удалось прочитать роль из profiles.";
+}
+
 async function fetchRole(): Promise<{ role: AppRole; error?: string }> {
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   const user = userRes?.user;
@@ -26,7 +33,7 @@ async function fetchRole(): Promise<{ role: AppRole; error?: string }> {
     .eq("user_id", user.id)
     .single();
 
-  if (error) return { role: "guest", error: error.message };
+  if (error) return { role: "guest", error: formatRoleError(error) };
 
   const r = (data?.role as AppRole) || "guest";
   return { role: r };
@@ -82,7 +89,8 @@ export function AdminGate({
           Ошибка чтения <code>public.profiles</code>: <b>{error}</b>
         </div>
         <div className="mt-3 text-white/70 text-sm">
-          Обычно причина — нет строки в profiles для твоего user_id или RLS не даёт читать свой профиль.
+          Если видишь “нет строки”, создай профиль через backfill в <code>supabase_admin.sql</code> или убедись,
+          что триггер на <code>auth.users</code> включён. Если строки есть — проверь RLS.
         </div>
         <div className="mt-4">
           <a className="underline text-white/90" href="/login">Перезайти</a>

@@ -88,6 +88,31 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
 
+-- 6.1) backfill profiles for existing users (важно для аккаунтов до триггера)
+insert into public.profiles(user_id, email, role)
+select u.id, u.email, 'guest'::app_role
+from auth.users u
+where not exists (
+  select 1
+  from public.profiles p
+  where p.user_id = u.id
+);
+
+-- 6.2) назначение роли конкретному пользователю (email/uuid)
+-- по email (создаст строку в profiles, если её нет)
+insert into public.profiles(user_id, email, role)
+select u.id, u.email, 'admin'::app_role
+from auth.users u
+where u.email = 'admin@example.com'
+on conflict (user_id) do update
+set role = excluded.role,
+    email = excluded.email;
+
+-- по uuid (предполагается, что пользователь уже существует в auth.users)
+update public.profiles
+set role = 'admin'::app_role
+where user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+
 -- 7) RLS
 alter table public.profiles enable row level security;
 alter table public.orders enable row level security;
