@@ -6,6 +6,7 @@ import { PizzaPage } from "../pages/PizzaPage";
 import { CartPage } from "../pages/CartPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
 import { LoginPage } from "../pages/LoginPage";
+import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { CateringPage } from "../pages/CateringPage";
 import { ContactsPage } from "../pages/ContactsPage";
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
       { path: "cart", element: <CartPage /> },
       { path: "checkout", element: <CheckoutPage /> },
       { path: "login", element: <LoginPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
       {
         path: "profile",
         element: (
