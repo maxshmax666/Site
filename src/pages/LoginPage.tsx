@@ -104,6 +104,29 @@ export function LoginPage() {
     }
   };
 
+  const onResetPassword = async () => {
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    try {
+      if (!hasSupabaseEnv) {
+        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+      }
+      if (!email) {
+        throw new Error("Введите email для восстановления пароля.");
+      }
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setOk("Письмо для восстановления отправлено. Проверьте почту.");
+    } catch (e) {
+      setError(prettifyError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 py-12">
       <div className="rounded-3xl p-6 bg-card border border-white/10 shadow-soft">
@@ -136,6 +159,18 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+        {mode === "login" && (
+          <div className="mt-3">
+            <button
+              className="text-xs text-white/70 hover:text-white underline"
+              type="button"
+              onClick={onResetPassword}
+              disabled={busy}
+            >
+              Забыли пароль?
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 p-3 rounded-2xl bg-danger/15 border border-danger/30 text-sm text-white">
