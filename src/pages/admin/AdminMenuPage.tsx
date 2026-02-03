@@ -44,8 +44,57 @@ export function AdminMenuPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [sort, setSort] = useState<string>("100");
   const [isActive, setIsActive] = useState(true);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
 
   const activeCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows]);
+
+  async function uploadImage(file: File) {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Нужен файл изображения (png/jpg/webp).");
+    }
+
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error("Файл слишком большой. Максимум 5MB.");
+    }
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const safeName = `${crypto.randomUUID()}.${ext}`;
+    const path = `menu/${safeName}`;
+
+    const { error } = await supabase.storage.from("menu").upload(path, file, {
+      upsert: false,
+      contentType: file.type || "image/jpeg",
+      cacheControl: "3600",
+    });
+
+    if (error) throw new Error(error.message);
+
+    const { data } = supabase.storage.from("menu").getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error("Не удалось получить публичный URL.");
+    return data.publicUrl;
+  }
+
+  async function handleUpload() {
+    if (!imageFile) {
+      alert("Выбери файл");
+      return;
+    }
+
+    setUploading(true);
+    setUploadErr(null);
+
+    try {
+      const url = await uploadImage(imageFile);
+      setImageUrl(url);
+    } catch (e) {
+      setUploadErr(e instanceof Error ? e.message : "Ошибка загрузки");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -87,6 +136,8 @@ export function AdminMenuPage() {
     setTitle("");
     setDescription("");
     setImageUrl("");
+    setImageFile(null);
+    setUploadErr(null);
     setPrice("590");
     setSort("100");
     setIsActive(true);
@@ -151,6 +202,29 @@ export function AdminMenuPage() {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
             />
+            <label className="text-sm text-white/70">
+              Фото файла (загрузка в Supabase Storage)
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full text-sm text-white/70"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="soft" onClick={handleUpload} disabled={uploading || !imageFile}>
+                {uploading ? "Загрузка…" : "Загрузить фото"}
+              </Button>
+              {imageFile && (
+                <div className="text-xs text-white/60">
+                  {imageFile.name} • {(imageFile.size / 1024 / 1024).toFixed(2)} MB
+                </div>
+              )}
+            </div>
+            {uploadErr && <div className="text-xs text-danger">{uploadErr}</div>}
+            <div className="text-xs text-white/50">
+              Требуется публичный bucket <code>menu</code>. Если не настроен — используй прямую ссылку.
+            </div>
           </div>
 
           <div className="grid gap-2">
@@ -204,8 +278,14 @@ export function AdminMenuPage() {
                 </div>
                 {r.description && <div className="text-white/70 text-sm mt-1">{r.description}</div>}
                 {r.image_url && (
-                  <div className="text-white/60 text-xs mt-1 break-all">
-                    {r.image_url}
+                  <div className="mt-2">
+                    <img
+                      src={r.image_url}
+                      alt={r.title}
+                      className="h-24 w-24 rounded-xl object-cover border border-white/10"
+                      loading="lazy"
+                    />
+                    <div className="text-white/60 text-xs mt-1 break-all">{r.image_url}</div>
                   </div>
                 )}
               </div>
@@ -216,7 +296,7 @@ export function AdminMenuPage() {
               </div>
             </div>
 
-            <div className="mt-3 grid md:grid-cols-4 gap-2">
+            <div className="mt-3 grid md:grid-cols-6 gap-2">
               <Button
                 variant={r.is_active ? "soft" : "primary"}
                 onClick={() => updateItem(r.id, { is_active: !r.is_active })}
@@ -248,6 +328,26 @@ export function AdminMenuPage() {
                 }}
               >
                 Сортировка
+              </Button>
+
+              <Button
+                variant="soft"
+                onClick={() => {
+                  const v = prompt("Ссылка на фото", r.image_url ?? "");
+                  if (v === null) return;
+                  const next = v.trim();
+                  void updateItem(r.id, { image_url: next ? next : null });
+                }}
+              >
+                Фото (URL)
+              </Button>
+
+              <Button
+                variant="soft"
+                disabled={!r.image_url}
+                onClick={() => updateItem(r.id, { image_url: null })}
+              >
+                Очистить фото
               </Button>
 
               <Button variant="danger" onClick={() => removeItem(r.id)}>

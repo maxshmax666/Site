@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { menu } from "../data/menu";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { useCartStore } from "../store/cart.store";
+import { useMenuItems } from "../shared/hooks/useMenuItems";
 
 const sizes = [
   { key: "S" as const, label: "S", mul: 1.0 },
@@ -15,9 +15,20 @@ export function PizzaPage() {
   const { id } = useParams();
   const nav = useNavigate();
   const add = useCartStore((s) => s.add);
+  const { items, loading } = useMenuItems();
 
-  const item = useMemo(() => menu.find((x) => x.id === id), [id]);
+  const item = useMemo(() => items.find((x) => x.id === id), [items, id]);
   const [size, setSize] = useState<"S" | "M" | "L">("M");
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="rounded-3xl p-6 bg-card border border-white/10 text-white/70">
+          Загрузка позиции…
+        </div>
+      </div>
+    );
+  }
 
   if (!item) {
     return (
@@ -42,8 +53,12 @@ export function PizzaPage() {
 
       <div className="mt-4 grid lg:grid-cols-2 gap-6">
         <div className="rounded-3xl bg-card border border-white/10 shadow-soft overflow-hidden">
-          <div className="h-72 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-            <div className="text-7xl">🍕</div>
+          <div className="h-72 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
+            {item.image ? (
+              <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+            ) : (
+              <div className="text-7xl">🍕</div>
+            )}
           </div>
         </div>
 
