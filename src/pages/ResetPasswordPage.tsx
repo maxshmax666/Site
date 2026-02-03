@@ -43,14 +43,6 @@ export function ResetPasswordPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!ok) return;
-    const timeout = window.setTimeout(() => {
-      nav("/profile");
-    }, 900);
-    return () => window.clearTimeout(timeout);
-  }, [ok, nav]);
-
   const onSubmit = async () => {
     setBusy(true);
     setError(null);
@@ -61,7 +53,7 @@ export function ResetPasswordPage() {
       if (password !== passwordConfirm) throw new Error("Пароли не совпадают.");
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      setOk("Пароль обновлён. Сейчас перенаправим в профиль.");
+      setOk("Пароль обновлён. Можете перейти в профиль.");
     } catch (e) {
       setError(prettifyError(e));
     } finally {
@@ -122,8 +114,12 @@ export function ResetPasswordPage() {
           </div>
         )}
         {ok && (
-          <div className="mt-4 p-3 rounded-2xl bg-green/15 border border-green/30 text-sm text-white">
-            {ok}
+          <div className="mt-4 rounded-2xl border border-green/30 bg-green/15 p-4 text-white">
+            <div className="text-sm font-semibold text-green-50">Успешно</div>
+            <div className="mt-2 text-sm text-white/90">{ok}</div>
+            <div className="mt-4">
+              <Button onClick={() => nav("/profile")}>Перейти в профиль</Button>
+            </div>
           </div>
         )}
 
