@@ -10,25 +10,41 @@ type AuthState = {
 
   // ✅ роль берём из public.profiles
   role: Role;
+  roleError: string | null;
 
   init: () => Promise<void>;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
-async function fetchRole(): Promise<Role> {
+function formatRoleError(error: { code?: string; message?: string }) {
+  if (error.code === "PGRST116") {
+    return "Нет строки в profiles для текущего пользователя. Запустите backfill/триггер из supabase_admin.sql.";
+  }
+  return error.message ?? "Не удалось прочитать роль из profiles.";
+}
+
+async function fetchRole(): Promise<{ role: Role; error: string | null }> {
+  const { data: userRes, error: userErr } = await supabase.auth.getUser();
+  const userId = userRes?.user?.id;
+
+  if (userErr) {
+    return { role: "guest", error: userErr.message };
+  }
+  if (!userId) {
+    return { role: "guest", error: null };
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
-    .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
-    .maybeSingle();
+    .eq("user_id", userId)
+    .single();
 
   if (error) {
-    // если таблицы ещё нет / RLS / нет профиля — пусть будет guest
-    console.warn("profiles.role fetch error:", error.message);
-    return "guest";
+    return { role: "guest", error: formatRoleError(error) };
   }
-  return (data?.role as Role) ?? "guest";
+  return { role: (data?.role as Role) ?? "guest", error: null };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -36,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: true,
   role: "guest",
+  roleError: null,
 
   init: async () => {
     // 1) initial session
@@ -46,10 +63,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // 2) load role if logged in
     if (session?.user) {
-      const role = await fetchRole();
-      set({ role });
+      const res = await fetchRole();
+      set({ role: res.role, roleError: res.error });
     } else {
-      set({ role: "guest" });
+      set({ role: "guest", roleError: null });
     }
 
     // 3) subscribe
@@ -61,23 +78,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (session2?.user) {
-        const role = await fetchRole();
-        set({ role });
+        const res = await fetchRole();
+        set({ role: res.role, roleError: res.error });
       } else {
-        set({ role: "guest" });
+        set({ role: "guest", roleError: null });
       }
     });
   },
 
   refreshRole: async () => {
     const user = get().user;
-    if (!user) return set({ role: "guest" });
-    const role = await fetchRole();
-    set({ role });
+    if (!user) return set({ role: "guest", roleError: null });
+    const res = await fetchRole();
+    set({ role: res.role, roleError: res.error });
   },
 
   signOut: async () => {
     await supabase.auth.signOut();
-    set({ session: null, user: null, role: "guest" });
+    set({ session: null, user: null, role: "guest", roleError: null });
   },
 }));

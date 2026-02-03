@@ -6,6 +6,7 @@ export function ProfilePage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const roleError = useAuthStore((s) => s.roleError);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -15,6 +16,13 @@ export function ProfilePage() {
       <div className="mt-6 rounded-3xl p-6 bg-card border border-white/10 shadow-soft">
         <div className="font-bold text-lg">Ты в системе ✅</div>
         <div className="mt-2 text-white/80">Email: {user?.email ?? "—"}</div>
+
+        {roleError && (
+          <div className="mt-4 rounded-2xl border border-danger/30 bg-danger/15 p-4 text-sm text-white">
+            <div className="font-semibold">Не удалось загрузить роль</div>
+            <div className="mt-1 text-white/80">{roleError}</div>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Link to="/menu"><Button>Сделать заказ</Button></Link>
