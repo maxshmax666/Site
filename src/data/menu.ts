@@ -18,15 +18,15 @@ export type MenuItem = {
   image?: string; // placeholder
 };
 
-export const categories: Array<{ key: MenuCategory; label: string }> = [
-  { key: "classic", label: "Классика" },
-  { key: "signature", label: "Фирменные" },
-  { key: "roman", label: "Римская" },
-  { key: "seasonal", label: "Сезонные" },
-  { key: "cold", label: "Холодные" },
-  { key: "fried", label: "Жареные" },
-  { key: "desserts", label: "Десерты" },
-  { key: "drinks", label: "Напитки" },
+export const categories: Array<{ key: MenuCategory; label: string; image: string }> = [
+  { key: "classic", label: "Классика", image: "/menu-categories/classic.svg" },
+  { key: "signature", label: "Фирменные", image: "/menu-categories/signature.svg" },
+  { key: "roman", label: "Римская", image: "/menu-categories/roman.svg" },
+  { key: "seasonal", label: "Сезонные", image: "/menu-categories/seasonal.svg" },
+  { key: "cold", label: "Холодные", image: "/menu-categories/cold.svg" },
+  { key: "fried", label: "Жареные", image: "/menu-categories/fried.svg" },
+  { key: "desserts", label: "Десерты", image: "/menu-categories/desserts.svg" },
+  { key: "drinks", label: "Напитки", image: "/menu-categories/drinks.svg" },
 ];
 
 export const menu: MenuItem[] = [
