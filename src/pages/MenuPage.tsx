@@ -36,6 +36,32 @@ export function MenuPage() {
         </div>
       )}
 
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {categories.map((category) => {
+          const isActive = category.key === cat;
+          return (
+            <button
+              key={category.key}
+              type="button"
+              onClick={() => setCat(category.key)}
+              aria-pressed={isActive}
+              className={[
+                "group relative flex items-end overflow-hidden rounded-2xl border border-white/10 bg-center bg-cover",
+                "h-28 sm:h-32 md:h-36 lg:h-40 shadow-lg shadow-black/30",
+                "transition-transform duration-200 ease-out hover:-translate-y-0.5",
+                isActive ? "ring-2 ring-white/70" : "hover:ring-1 hover:ring-white/40",
+              ].join(" ")}
+              style={{ backgroundImage: `url(${category.image})`, backgroundSize: "cover" }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/5" />
+              <div className="relative z-10 p-4">
+                <div className="text-lg font-semibold text-white">{category.label}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
       {loading && <div className="mt-6 text-white/70">Загрузка меню…</div>}
 
       <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
