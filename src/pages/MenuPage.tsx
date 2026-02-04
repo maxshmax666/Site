@@ -7,6 +7,7 @@ import { useMenuItems } from "../shared/hooks/useMenuItems";
 export function MenuPage() {
   const [cat, setCat] = useState<MenuCategory>("classic");
   const { items, loading, error, hasSupabaseEnv } = useMenuItems();
+  const activeCategory = useMemo(() => categories.find((c) => c.key === cat), [cat]);
 
   const itemsForCategory = useMemo(() => items.filter((x) => x.category === cat), [items, cat]);
 
@@ -33,6 +34,16 @@ export function MenuPage() {
       {!hasSupabaseEnv && (
         <div className="mt-4 rounded-2xl p-3 bg-black/20 border border-white/10 text-sm text-white/70">
           Supabase не настроен. Показаны демо-данные из проекта.
+        </div>
+      )}
+
+      {activeCategory && (
+        <div
+          className="mt-4 rounded-2xl p-4 border border-white/10 text-white/90"
+          style={{ backgroundImage: activeCategory.background }}
+        >
+          <div className="text-sm uppercase tracking-wide text-white/70">Категория</div>
+          <div className="text-xl font-semibold">{activeCategory.label}</div>
         </div>
       )}
 

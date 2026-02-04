@@ -15,18 +15,20 @@ export type MenuItem = {
   desc: string;
   priceFrom: number;
   badges?: Array<"hit" | "new" | "spicy">;
-  image?: string; // placeholder
+  // Фоны задаём текстовыми градиентами или data-URI, чтобы избегать бинарников в PR.
+  background?: string;
 };
 
-export const categories: Array<{ key: MenuCategory; label: string }> = [
-  { key: "classic", label: "Классика" },
-  { key: "signature", label: "Фирменные" },
-  { key: "roman", label: "Римская" },
-  { key: "seasonal", label: "Сезонные" },
-  { key: "cold", label: "Холодные" },
-  { key: "fried", label: "Жареные" },
-  { key: "desserts", label: "Десерты" },
-  { key: "drinks", label: "Напитки" },
+// Фоны категорий — текстовые градиенты, чтобы не тащить бинарные ассеты в PR.
+export const categories: Array<{ key: MenuCategory; label: string; background: string }> = [
+  { key: "classic", label: "Классика", background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)" },
+  { key: "signature", label: "Фирменные", background: "linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%)" },
+  { key: "roman", label: "Римская", background: "linear-gradient(135deg, #9a3412 0%, #431407 100%)" },
+  { key: "seasonal", label: "Сезонные", background: "linear-gradient(135deg, #047857 0%, #064e3b 100%)" },
+  { key: "cold", label: "Холодные", background: "linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%)" },
+  { key: "fried", label: "Жареные", background: "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)" },
+  { key: "desserts", label: "Десерты", background: "linear-gradient(135deg, #db2777 0%, #9d174d 100%)" },
+  { key: "drinks", label: "Напитки", background: "linear-gradient(135deg, #0f766e 0%, #134e4a 100%)" },
 ];
 
 export const menu: MenuItem[] = [
