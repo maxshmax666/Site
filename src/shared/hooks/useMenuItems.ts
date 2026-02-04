@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { menu as fallbackMenu, type MenuCategory, type MenuItem } from "../../data/menu";
+import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
+import { type MenuCategory } from "../../data/menuCategories";
 
 type DbMenuItem = {
   id: string;

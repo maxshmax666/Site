@@ -3,39 +3,19 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-
-type Category =
-  | "classic"
-  | "signature"
-  | "roman"
-  | "seasonal"
-  | "cold"
-  | "fried"
-  | "desserts"
-  | "drinks";
+import { menuCategoryList, type MenuCategory } from "../../data/menuCategories";
 
 type MenuItem = {
   id: string;
   created_at: string;
   title: string;
   description: string | null;
-  category: Category;
+  category: MenuCategory;
   price: number;
   image_url: string | null;
   is_active: boolean;
   sort: number;
 };
-
-const categories: { value: Category; label: string }[] = [
-  { value: "classic", label: "Классика" },
-  { value: "signature", label: "Фирменные" },
-  { value: "roman", label: "Римская" },
-  { value: "seasonal", label: "Сезонные" },
-  { value: "cold", label: "Холодные" },
-  { value: "fried", label: "Жареные" },
-  { value: "desserts", label: "Десерты" },
-  { value: "drinks", label: "Напитки" },
-];
 
 function money(n: number) {
   if (!Number.isFinite(n)) return "0 ₽";
@@ -50,7 +30,7 @@ export function AdminMenuPage() {
   // form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category>("classic");
+  const [category, setCategory] = useState<MenuCategory>("classic");
   const [price, setPrice] = useState<string>("590");
   const [imageUrl, setImageUrl] = useState("");
   const [sort, setSort] = useState<string>("100");
@@ -246,7 +226,7 @@ export function AdminMenuPage() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
               >
-                {categories.map((c) => (
+                {menuCategoryList.map((c) => (
                   <option key={c.value} value={c.value}>
                     {c.label}
                   </option>
@@ -284,7 +264,9 @@ export function AdminMenuPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="font-black text-lg">{r.title}</div>
-                  <Badge>{categories.find((c) => c.value === r.category)?.label ?? r.category}</Badge>
+                  <Badge>
+                    {menuCategoryList.find((c) => c.value === r.category)?.label ?? r.category}
+                  </Badge>
                   {!r.is_active && <Badge>СКРЫТО</Badge>}
                 </div>
                 {r.description && <div className="text-white/70 text-sm mt-1">{r.description}</div>}
