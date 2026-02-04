@@ -18,7 +18,7 @@ create table if not exists public.profiles (
   role app_role not null default 'guest',
   created_at timestamptz not null default now()
 );
-alter table public.profiles owner to supabase_admin;
+-- alter table public.profiles owner to supabase_admin;
 
 -- 3) orders table
 do $$
@@ -67,7 +67,7 @@ as $$
     'guest'::app_role
   );
 $$;
-alter function public.current_role() owner to supabase_admin;
+-- alter function public.current_role() owner to supabase_admin;
 
 -- 5.1) helper: current user's role without triggering profiles RLS
 create or replace function public.current_role_unrestricted()
@@ -83,7 +83,7 @@ as $$
     'guest'::app_role
   );
 $$;
-alter function public.current_role_unrestricted() owner to supabase_admin;
+-- alter function public.current_role_unrestricted() owner to supabase_admin;
 
 -- 6) trigger: create profile on signup
 create or replace function public.handle_new_user()
