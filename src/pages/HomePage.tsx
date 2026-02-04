@@ -18,9 +18,9 @@ export function HomePage() {
   const { items } = useMenuItems();
 
   const hits = useMemo(() => {
-    const tagged = items.filter((x) => x.category === "pizza" && x.badges?.includes("hit"));
+    const tagged = items.filter((x) => x.category === "classic" && x.badges?.includes("hit"));
     if (tagged.length > 0) return tagged.slice(0, 6);
-    return items.filter((x) => x.category === "pizza").slice(0, 6);
+    return items.filter((x) => x.category === "classic").slice(0, 6);
   }, [items]);
 
   return (

@@ -5,7 +5,7 @@ import { PizzaCard } from "../components/cards/PizzaCard";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
 
 export function MenuPage() {
-  const [cat, setCat] = useState<MenuCategory>("pizza");
+  const [cat, setCat] = useState<MenuCategory>("classic");
   const { items, loading, error, hasSupabaseEnv } = useMenuItems();
 
   const itemsForCategory = useMemo(() => items.filter((x) => x.category === cat), [items, cat]);

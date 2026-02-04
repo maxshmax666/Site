@@ -1,4 +1,12 @@
-export type MenuCategory = "pizza" | "snacks" | "drinks" | "desserts" | "other";
+export type MenuCategory =
+  | "classic"
+  | "signature"
+  | "roman"
+  | "seasonal"
+  | "cold"
+  | "fried"
+  | "desserts"
+  | "drinks";
 
 export type MenuItem = {
   id: string;
@@ -11,26 +19,137 @@ export type MenuItem = {
 };
 
 export const categories: Array<{ key: MenuCategory; label: string }> = [
-  { key: "pizza", label: "Пицца" },
-  { key: "snacks", label: "Закуски" },
-  { key: "drinks", label: "Напитки" },
+  { key: "classic", label: "Классика" },
+  { key: "signature", label: "Фирменные" },
+  { key: "roman", label: "Римская" },
+  { key: "seasonal", label: "Сезонные" },
+  { key: "cold", label: "Холодные" },
+  { key: "fried", label: "Жареные" },
   { key: "desserts", label: "Десерты" },
-  { key: "other", label: "Другое" },
+  { key: "drinks", label: "Напитки" },
 ];
 
 export const menu: MenuItem[] = [
-  { id: "p1", category: "pizza", title: "Пицца №1", desc: "Соус • сыр • колбаса", priceFrom: 499, badges: ["hit"] },
-  { id: "p2", category: "pizza", title: "Пицца №2", desc: "Соус • сыр • грибы", priceFrom: 519 },
-  { id: "p3", category: "pizza", title: "Пицца №3", desc: "Соус • сыр • мясо", priceFrom: 549, badges: ["new"] },
-  { id: "p4", category: "pizza", title: "Пицца №4", desc: "Соус • сыр • курица", priceFrom: 539, badges: ["spicy"] },
+  {
+    id: "c1",
+    category: "classic",
+    title: "Маргарита",
+    desc: "Соус • моцарелла • базилик",
+    priceFrom: 520,
+    badges: ["hit"],
+  },
+  {
+    id: "c2",
+    category: "classic",
+    title: "Пепперони",
+    desc: "Пикантная салями • моцарелла • соус",
+    priceFrom: 590,
+  },
 
-  { id: "s1", category: "snacks", title: "Закуска №1", desc: "Картофель / наггетсы", priceFrom: 199 },
-  { id: "s2", category: "snacks", title: "Закуска №2", desc: "Сырные палочки", priceFrom: 239 },
+  {
+    id: "sg1",
+    category: "signature",
+    title: "Тагильская фирменная",
+    desc: "Говядина • соус BBQ • халапеньо",
+    priceFrom: 690,
+    badges: ["new"],
+  },
+  {
+    id: "sg2",
+    category: "signature",
+    title: "Сырный дым",
+    desc: "Копчёная курица • моцарелла • пармезан",
+    priceFrom: 640,
+  },
 
-  { id: "d1", category: "drinks", title: "Напиток №1", desc: "Газировка / сок", priceFrom: 99 },
-  { id: "d2", category: "drinks", title: "Напиток №2", desc: "Морс / вода", priceFrom: 89 },
+  {
+    id: "r1",
+    category: "roman",
+    title: "Римская прошутто",
+    desc: "Прошутто • руккола • пармезан",
+    priceFrom: 720,
+  },
+  {
+    id: "r2",
+    category: "roman",
+    title: "Римская грибная",
+    desc: "Шампиньоны • трюфельный соус",
+    priceFrom: 680,
+  },
 
-  { id: "ds1", category: "desserts", title: "Десерт №1", desc: "Печенье / чизкейк", priceFrom: 179 },
+  {
+    id: "se1",
+    category: "seasonal",
+    title: "Осенняя тыквенная",
+    desc: "Тыква • бекон • сливочный соус",
+    priceFrom: 610,
+  },
+  {
+    id: "se2",
+    category: "seasonal",
+    title: "Летняя с томатами",
+    desc: "Свежие томаты • базилик • фета",
+    priceFrom: 590,
+  },
 
-  { id: "sc1", category: "other", title: "Соус №1", desc: "Чесночный / сырный", priceFrom: 49 },
+  {
+    id: "cl1",
+    category: "cold",
+    title: "Салат Цезарь",
+    desc: "Курица • ромэн • соус цезарь",
+    priceFrom: 310,
+  },
+  {
+    id: "cl2",
+    category: "cold",
+    title: "Салат греческий",
+    desc: "Фета • огурцы • оливки",
+    priceFrom: 290,
+  },
+
+  {
+    id: "fr1",
+    category: "fried",
+    title: "Картофель фри",
+    desc: "Соль • соус на выбор",
+    priceFrom: 190,
+  },
+  {
+    id: "fr2",
+    category: "fried",
+    title: "Куриные наггетсы",
+    desc: "6 шт • соус барбекю",
+    priceFrom: 260,
+    badges: ["spicy"],
+  },
+
+  {
+    id: "ds1",
+    category: "desserts",
+    title: "Чизкейк Нью-Йорк",
+    desc: "Сливочный крем • ягодный соус",
+    priceFrom: 210,
+  },
+  {
+    id: "ds2",
+    category: "desserts",
+    title: "Брауни",
+    desc: "Шоколад • мороженое",
+    priceFrom: 190,
+  },
+
+  {
+    id: "dr1",
+    category: "drinks",
+    title: "Кола 0.5",
+    desc: "Классическая • охлаждённая",
+    priceFrom: 120,
+  },
+  {
+    id: "dr2",
+    category: "drinks",
+    title: "Домашний морс",
+    desc: "Клюква • мята",
+    priceFrom: 140,
+  },
 ];

@@ -4,7 +4,15 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 
-type Category = "pizza" | "snacks" | "drinks" | "desserts" | "other";
+type Category =
+  | "classic"
+  | "signature"
+  | "roman"
+  | "seasonal"
+  | "cold"
+  | "fried"
+  | "desserts"
+  | "drinks";
 
 type MenuItem = {
   id: string;
@@ -19,11 +27,14 @@ type MenuItem = {
 };
 
 const categories: { value: Category; label: string }[] = [
-  { value: "pizza", label: "Пицца" },
-  { value: "snacks", label: "Закуски" },
-  { value: "drinks", label: "Напитки" },
+  { value: "classic", label: "Классика" },
+  { value: "signature", label: "Фирменные" },
+  { value: "roman", label: "Римская" },
+  { value: "seasonal", label: "Сезонные" },
+  { value: "cold", label: "Холодные" },
+  { value: "fried", label: "Жареные" },
   { value: "desserts", label: "Десерты" },
-  { value: "other", label: "Другое" },
+  { value: "drinks", label: "Напитки" },
 ];
 
 function money(n: number) {
@@ -39,7 +50,7 @@ export function AdminMenuPage() {
   // form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category>("pizza");
+  const [category, setCategory] = useState<Category>("classic");
   const [price, setPrice] = useState<string>("590");
   const [imageUrl, setImageUrl] = useState("");
   const [sort, setSort] = useState<string>("100");
