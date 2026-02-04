@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { categories, type MenuCategory } from "../data/menu";
+import { categories } from "../data/menu";
+import { type MenuCategory } from "../data/menuCategories";
 import { Tabs } from "../components/ui/Tabs";
 import { PizzaCard } from "../components/cards/PizzaCard";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
