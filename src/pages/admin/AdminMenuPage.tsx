@@ -11,6 +11,7 @@ type MenuItem = {
   title: string;
   description: string | null;
   category: MenuCategory;
+  hasLegacyCategory: boolean;
   price: number;
   image_url: string | null;
   is_active: boolean;
@@ -73,10 +74,9 @@ function toNumber(value: unknown, field: string) {
 }
 
 function mapDbItem(raw: Record<string, unknown>): MenuItem {
-  const categoryValue = raw.category;
-  if (!isMenuCategory(String(categoryValue))) {
-    throw new Error("Поле \"category\" содержит недопустимое значение");
-  }
+  const rawCategory = String(raw.category ?? "");
+  const hasLegacyCategory = !isMenuCategory(rawCategory);
+  const category: MenuCategory = hasLegacyCategory ? "classic" : rawCategory;
 
   const isActiveValue = raw.is_active;
   if (typeof isActiveValue !== "boolean") {
@@ -88,7 +88,8 @@ function mapDbItem(raw: Record<string, unknown>): MenuItem {
     created_at: toTrimmedString(raw.created_at, "created_at"),
     title: toTrimmedString(raw.title, "title"),
     description: toOptionalString(raw.description, "description"),
-    category: categoryValue,
+    category,
+    hasLegacyCategory,
     price: toNumber(raw.price, "price"),
     image_url: toOptionalString(raw.image_url, "image_url"),
     is_active: isActiveValue,
@@ -223,7 +224,7 @@ export function AdminMenuPage() {
     if (errors.length > 0) {
       const details = errors.slice(0, MAX_ERROR_DETAILS).join("; ");
       const suffix = errors.length > MAX_ERROR_DETAILS ? ` (+${errors.length - MAX_ERROR_DETAILS} ещё)` : "";
-      setErr(`Часть данных не прочитана: ${details}${suffix}`);
+      setErr(`Предупреждение: часть строк загружена с ограничениями: ${details}${suffix}`);
     }
 
     setRows(nextRows);
@@ -266,7 +267,7 @@ export function AdminMenuPage() {
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      category: form.category,
+      category: form.category as MenuCategory,
       price: Number(form.price),
       image_url: form.imageUrl.trim() || null,
       is_active: form.isActive,
@@ -341,7 +342,7 @@ export function AdminMenuPage() {
         </Button>
       </div>
 
-      {err && <div className="mt-4 p-3 rounded-2xl bg-danger/15 border border-danger/30 text-sm text-white">{err}</div>}
+      {err && <div className="mt-4 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-400/30 text-sm text-yellow-100">{err}</div>}
 
       <div className="mt-5 rounded-2xl p-4 bg-black/20 border border-white/10">
         <div className="font-bold">{editingId ? "Редактировать позицию" : "Добавить позицию"}</div>
@@ -411,6 +412,7 @@ export function AdminMenuPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="font-black text-lg">{r.title}</div>
                   <Badge>{categories.find((c) => c.key === r.category)?.label ?? r.category}</Badge>
+                  {r.hasLegacyCategory && <Badge>legacy category, требуется миграция</Badge>}
                   {!r.is_active && <Badge>СКРЫТО</Badge>}
                 </div>
                 {r.description && <div className="text-white/70 text-sm mt-1">{r.description}</div>}
