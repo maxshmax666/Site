@@ -17,6 +17,62 @@ type MenuItem = {
   sort: number;
 };
 
+const MAX_ERROR_DETAILS = 5;
+
+function toTrimmedString(value: unknown, field: string) {
+  if (typeof value !== "string") {
+    throw new Error(`Поле "${field}" должно быть строкой`);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`Поле "${field}" не должно быть пустым`);
+  }
+  return trimmed;
+}
+
+function toOptionalString(value: unknown, field: string) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") {
+    throw new Error(`Поле "${field}" должно быть строкой или null`);
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function toNumber(value: unknown, field: string) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Поле "${field}" должно быть числом`);
+  }
+  return n;
+}
+
+function mapDbItem(raw: Record<string, unknown>): MenuItem {
+  const categoryValue = raw.category;
+  if (!isMenuCategory(categoryValue)) {
+    throw new Error(
+      `Поле "category" должно быть одним из: ${menuCategoryList.map((c) => c.value).join(", ")}`
+    );
+  }
+
+  const isActiveValue = raw.is_active;
+  if (typeof isActiveValue !== "boolean") {
+    throw new Error('Поле "is_active" должно быть boolean');
+  }
+
+  return {
+    id: toTrimmedString(raw.id, "id"),
+    created_at: toTrimmedString(raw.created_at, "created_at"),
+    title: toTrimmedString(raw.title, "title"),
+    description: toOptionalString(raw.description, "description"),
+    category: categoryValue,
+    price: toNumber(raw.price, "price"),
+    image_url: toOptionalString(raw.image_url, "image_url"),
+    is_active: isActiveValue,
+    sort: toNumber(raw.sort, "sort"),
+  };
+}
+
 function money(n: number) {
   if (!Number.isFinite(n)) return "0 ₽";
   return `${Math.round(n)} ₽`;
@@ -99,8 +155,35 @@ export function AdminMenuPage() {
       .order("created_at", { ascending: false })
       .limit(500);
 
-    if (error) setErr(error.message);
-    setRows((data ?? []) as any);
+    if (error) {
+      setErr(error.message);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    const rowsToMap = Array.isArray(data) ? data : [];
+    const nextRows: MenuItem[] = [];
+    const errors: string[] = [];
+
+    rowsToMap.forEach((item, index) => {
+      try {
+        nextRows.push(mapDbItem(item as Record<string, unknown>));
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Неизвестная ошибка";
+        errors.push(`Строка ${index + 1}: ${message}`);
+      }
+    });
+
+    if (errors.length > 0) {
+      const details = errors.slice(0, MAX_ERROR_DETAILS).join("; ");
+      const suffix =
+        errors.length > MAX_ERROR_DETAILS
+          ? ` (+${errors.length - MAX_ERROR_DETAILS} ещё)`
+          : "";
+      setErr(`Часть данных не прошла валидацию и была пропущена. ${details}${suffix}`);
+    }
+
+    setRows(nextRows);
     setLoading(false);
   }
 
