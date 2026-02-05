@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/lib/supabase";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 

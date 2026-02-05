@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { categories as fallbackCategories } from "../../data/menu";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/lib/supabase";
 
 export type MenuCategoryItem = {
   key: MenuCategory;
