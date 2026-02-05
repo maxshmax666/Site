@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/cart.store";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
@@ -13,9 +14,21 @@ const nav = [
 ];
 
 export function Header() {
+  const navigate = useNavigate();
   const count = useCartStore((s) => s.count());
+  const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
+  const signOut = useAuthStore((s) => s.signOut);
   const showAdmin = hasRole(role as Role, "engineer"); // engineer+ видят админку
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Ошибка выхода из аккаунта", error);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-[40] backdrop-blur bg-bg/75 border-b border-white/10">
@@ -58,13 +71,30 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="px-3 py-2 rounded-xl text-xs bg-white/10 text-white/80">role: {String(role)}</div>
-          <NavLink
-            to="/login"
-            className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
-          >
-            Войти
-          </NavLink>
+          {user === null ? (
+            <NavLink
+              to="/login"
+              className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
+            >
+              Войти
+            </NavLink>
+          ) : (
+            <>
+              <NavLink
+                to="/profile"
+                className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
+              >
+                Профиль
+              </NavLink>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
+              >
+                Выйти
+              </button>
+            </>
+          )}
           <NavLink
             to="/cart"
             className="relative px-4 py-2 rounded-xl text-sm bg-orange text-black font-semibold hover:opacity-90"
