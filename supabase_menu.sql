@@ -3,6 +3,9 @@
 -- Run this once in Supabase SQL Editor (after supabase_admin.sql)
 -- =========================
 
+-- 0) Diagnostic (run before migration; helps to discover historical category keys)
+-- select category::text as category, count(*) from public.menu_items group by 1 order by 2 desc;
+
 -- category enum
 do $$
 begin
@@ -40,10 +43,53 @@ begin
       alter column category type menu_category_v2
       using (
         case category::text
+          -- legacy values
           when 'pizza' then 'classic'
-          when 'snacks' then 'fried'
+          when 'pizzas' then 'classic'
+          when 'traditional' then 'classic'
+          when 'classic_pizza' then 'classic'
+
+          when 'firm' then 'signature'
+          when 'special' then 'signature'
+          when 'signature_pizza' then 'signature'
+
+          when 'rome' then 'roman'
+          when 'roma' then 'roman'
+          when 'roman_pizza' then 'roman'
+
+          when 'season' then 'seasonal'
+          when 'promo' then 'seasonal'
           when 'other' then 'seasonal'
-          else category::text
+          when 'other_pizza' then 'seasonal'
+
+          when 'cold_pizza' then 'cold'
+
+          when 'snacks' then 'fried'
+          when 'hot_snacks' then 'fried'
+          when 'fried_snacks' then 'fried'
+
+          when 'dessert' then 'desserts'
+          when 'sweet' then 'desserts'
+
+          when 'drink' then 'drinks'
+          when 'beverages' then 'drinks'
+
+          -- already valid enum values
+          when 'classic' then 'classic'
+          when 'signature' then 'signature'
+          when 'roman' then 'roman'
+          when 'seasonal' then 'seasonal'
+          when 'cold' then 'cold'
+          when 'fried' then 'fried'
+          when 'desserts' then 'desserts'
+          when 'drinks' then 'drinks'
+
+          -- defensive fallback: prevent cast failures on unknown historical values
+          when '' then 'classic'
+          when 'null' then 'classic'
+          when 'undefined' then 'classic'
+          when 'unknown' then 'classic'
+          else 'classic'
         end
       )::menu_category_v2;
     alter table if exists public.menu_items alter column category set default 'classic';
@@ -51,6 +97,60 @@ begin
     alter type menu_category_v2 rename to menu_category;
   end if;
 end$$;
+
+-- 1) One-off data fix for legacy textual keys (safe to run repeatedly)
+update public.menu_items
+set category = (
+  case category::text
+    when 'pizza' then 'classic'
+    when 'pizzas' then 'classic'
+    when 'traditional' then 'classic'
+    when 'classic_pizza' then 'classic'
+
+    when 'firm' then 'signature'
+    when 'special' then 'signature'
+    when 'signature_pizza' then 'signature'
+
+    when 'rome' then 'roman'
+    when 'roma' then 'roman'
+    when 'roman_pizza' then 'roman'
+
+    when 'season' then 'seasonal'
+    when 'promo' then 'seasonal'
+    when 'other' then 'seasonal'
+    when 'other_pizza' then 'seasonal'
+
+    when 'cold_pizza' then 'cold'
+
+    when 'snacks' then 'fried'
+    when 'hot_snacks' then 'fried'
+    when 'fried_snacks' then 'fried'
+
+    when 'dessert' then 'desserts'
+    when 'sweet' then 'desserts'
+
+    when 'drink' then 'drinks'
+    when 'beverages' then 'drinks'
+
+    when '' then 'classic'
+    when 'null' then 'classic'
+    when 'undefined' then 'classic'
+    when 'unknown' then 'classic'
+
+    else category::text
+  end
+)::menu_category
+where category::text in (
+  'pizza','pizzas','traditional','classic_pizza',
+  'firm','special','signature_pizza',
+  'rome','roma','roman_pizza',
+  'season','promo','other','other_pizza',
+  'cold_pizza',
+  'snacks','hot_snacks','fried_snacks',
+  'dessert','sweet',
+  'drink','beverages',
+  '','null','undefined','unknown'
+);
 
 -- menu_items table
 create table if not exists public.menu_items (
@@ -103,6 +203,34 @@ alter table public.menu_items
 alter table public.menu_items
   add constraint menu_items_category_fkey
   foreign key (category) references public.menu_categories(key) on update cascade;
+
+-- 2) Post-fix verification checks (type + FK integrity)
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'menu_items'
+      and column_name = 'category'
+      and udt_name = 'menu_category'
+  ) then
+    raise exception 'menu_items.category is not typed as menu_category';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where c.conname = 'menu_items_category_fkey'
+      and n.nspname = 'public'
+      and t.relname = 'menu_items'
+      and pg_get_constraintdef(c.oid) ilike '%foreign key (category) references public.menu_categories(key)%'
+  ) then
+    raise exception 'menu_items_category_fkey is missing or points to wrong target';
+  end if;
+end$$;
 
 -- RLS
 alter table public.menu_items enable row level security;
