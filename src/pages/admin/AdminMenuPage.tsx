@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { menuCategoryList, type MenuCategory } from "../../data/menuCategories";
+import { isMenuCategory, menuCategoryList, type MenuCategory } from "../../data/menuCategories";
 
 type MenuItem = {
   id: string;
@@ -224,7 +224,12 @@ export function AdminMenuPage() {
               <select
                 className="mt-1 w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-white"
                 value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (isMenuCategory(next)) {
+                    setCategory(next);
+                  }
+                }}
               >
                 {menuCategoryList.map((c) => (
                   <option key={c.value} value={c.value}>
