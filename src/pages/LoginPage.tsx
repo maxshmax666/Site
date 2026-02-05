@@ -29,11 +29,16 @@ export function LoginPage() {
   const [ok, setOk] = useState<string | null>(null);
   const oauthFallbackTimerRef = useRef<number | null>(null);
 
+  const clearOAuthFallbackTimer = () => {
+    if (oauthFallbackTimerRef.current) {
+      window.clearTimeout(oauthFallbackTimerRef.current);
+      oauthFallbackTimerRef.current = null;
+    }
+  };
+
   useEffect(() => {
     return () => {
-      if (oauthFallbackTimerRef.current) {
-        window.clearTimeout(oauthFallbackTimerRef.current);
-      }
+      clearOAuthFallbackTimer();
     };
   }, []);
 
@@ -94,11 +99,10 @@ export function LoginPage() {
   };
 
   const onGoogle = async () => {
+    if (isOAuthLoading) return;
+
     setIsOAuthLoading(true);
-    if (oauthFallbackTimerRef.current) {
-      window.clearTimeout(oauthFallbackTimerRef.current);
-      oauthFallbackTimerRef.current = null;
-    }
+    clearOAuthFallbackTimer();
     setError(null);
     setOk(null);
     try {
@@ -119,10 +123,7 @@ export function LoginPage() {
         setError("Не удалось перейти к Google. Проверьте блокировку pop-up/редиректов и попробуйте снова.");
       }, 5000);
     } catch (e) {
-      if (oauthFallbackTimerRef.current) {
-        window.clearTimeout(oauthFallbackTimerRef.current);
-        oauthFallbackTimerRef.current = null;
-      }
+      clearOAuthFallbackTimer();
       setError(prettifyError(e));
       setIsOAuthLoading(false);
     }
