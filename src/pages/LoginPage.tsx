@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -22,9 +22,20 @@ export function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const oauthFallbackTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (oauthFallbackTimerRef.current) {
+        window.clearTimeout(oauthFallbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const hasSupabaseEnv = Boolean(
     import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -47,7 +58,7 @@ export function LoginPage() {
   }
 
   const onSubmit = async () => {
-    setBusy(true);
+    setIsAuthLoading(true);
     setError(null);
     setOk(null);
     try {
@@ -78,12 +89,16 @@ export function LoginPage() {
     } catch (e) {
       setError(prettifyError(e));
     } finally {
-      setBusy(false);
+      setIsAuthLoading(false);
     }
   };
 
   const onGoogle = async () => {
-    setBusy(true);
+    setIsOAuthLoading(true);
+    if (oauthFallbackTimerRef.current) {
+      window.clearTimeout(oauthFallbackTimerRef.current);
+      oauthFallbackTimerRef.current = null;
+    }
     setError(null);
     setOk(null);
     try {
@@ -98,14 +113,23 @@ export function LoginPage() {
       });
       if (error) throw error;
       // дальше редиректит Supabase/Google
+      oauthFallbackTimerRef.current = window.setTimeout(() => {
+        setIsOAuthLoading(false);
+        oauthFallbackTimerRef.current = null;
+        setError("Не удалось перейти к Google. Проверьте блокировку pop-up/редиректов и попробуйте снова.");
+      }, 5000);
     } catch (e) {
+      if (oauthFallbackTimerRef.current) {
+        window.clearTimeout(oauthFallbackTimerRef.current);
+        oauthFallbackTimerRef.current = null;
+      }
       setError(prettifyError(e));
-      setBusy(false);
+      setIsOAuthLoading(false);
     }
   };
 
   const onResetPassword = async () => {
-    setBusy(true);
+    setIsResetLoading(true);
     setError(null);
     setOk(null);
     try {
@@ -123,8 +147,21 @@ export function LoginPage() {
     } catch (e) {
       setError(prettifyError(e));
     } finally {
-      setBusy(false);
+      setIsResetLoading(false);
     }
+  };
+
+  const onPrimaryActionSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSubmit();
+  };
+
+  const onBack = () => {
+    if (window.history.length > 1) {
+      nav(-1);
+      return;
+    }
+    nav("/", { replace: true });
   };
 
   return (
@@ -145,7 +182,7 @@ export function LoginPage() {
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3">
+        <form className="mt-5 grid gap-3" onSubmit={onPrimaryActionSubmit}>
           <Input
             placeholder="Email"
             inputMode="email"
@@ -158,16 +195,19 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </div>
+          <Button disabled={isAuthLoading} type="submit">
+            {mode === "login" ? "Войти" : "Зарегистрироваться"}
+          </Button>
+        </form>
         {mode === "login" && (
           <div className="mt-3">
             <button
               className="text-xs text-white/70 hover:text-white underline"
               type="button"
               onClick={onResetPassword}
-              disabled={busy}
+              disabled={isResetLoading}
             >
-              Забыли пароль?
+              {isResetLoading ? "Отправка..." : "Забыли пароль?"}
             </button>
           </div>
         )}
@@ -184,15 +224,11 @@ export function LoginPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button disabled={busy} onClick={onSubmit}>
-            {mode === "login" ? "Войти" : "Зарегистрироваться"}
+          <Button disabled={isOAuthLoading} variant="soft" onClick={onGoogle}>
+            {isOAuthLoading ? "Переходим в Google..." : "Войти через Google"}
           </Button>
 
-          <Button disabled={busy} variant="soft" onClick={onGoogle}>
-            Войти через Google
-          </Button>
-
-          <Button disabled={busy} variant="ghost" onClick={() => nav(-1)}>
+          <Button variant="ghost" onClick={onBack}>
             Назад
           </Button>
         </div>
