@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { isMenuCategory, menuCategoryList, type MenuCategory } from "../../data/menuCategories";
+import { defaultMenuCategories, isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 
 type MenuItem = {
   id: string;
@@ -17,7 +17,32 @@ type MenuItem = {
   sort: number;
 };
 
+type CategoryOption = {
+  key: MenuCategory;
+  label: string;
+};
+
+type FormState = {
+  title: string;
+  description: string;
+  category: MenuCategory | "";
+  price: string;
+  imageUrl: string;
+  sort: string;
+  isActive: boolean;
+};
+
 const MAX_ERROR_DETAILS = 5;
+
+const INITIAL_FORM: FormState = {
+  title: "",
+  description: "",
+  category: "",
+  price: "590",
+  imageUrl: "",
+  sort: "100",
+  isActive: true,
+};
 
 function toTrimmedString(value: unknown, field: string) {
   if (typeof value !== "string") {
@@ -49,10 +74,8 @@ function toNumber(value: unknown, field: string) {
 
 function mapDbItem(raw: Record<string, unknown>): MenuItem {
   const categoryValue = raw.category;
-  if (!isMenuCategory(categoryValue)) {
-    throw new Error(
-      `Поле "category" должно быть одним из: ${menuCategoryList.map((c) => c.value).join(", ")}`
-    );
+  if (!isMenuCategory(String(categoryValue))) {
+    throw new Error("Поле \"category\" содержит недопустимое значение");
   }
 
   const isActiveValue = raw.is_active;
@@ -78,24 +101,46 @@ function money(n: number) {
   return `${Math.round(n)} ₽`;
 }
 
+function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
+  const rows = rawRows
+    .map((row) => row as Record<string, unknown>)
+    .map((row) => {
+      const key = String(row.key ?? "");
+      const label = String(row.label ?? "").trim();
+      if (!isMenuCategory(key) || !label) {
+        return null;
+      }
+      return { key, label } satisfies CategoryOption;
+    })
+    .filter(Boolean) as CategoryOption[];
+
+  return rows.length > 0
+    ? rows
+    : defaultMenuCategories.map((category) => ({ key: category.value, label: category.fullLabel }));
+}
+
 export function AdminMenuPage() {
   const [rows, setRows] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CategoryOption[]>(
+    defaultMenuCategories.map((category) => ({ key: category.value, label: category.fullLabel }))
+  );
 
-  // form
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<MenuCategory>("classic");
-  const [price, setPrice] = useState<string>("590");
-  const [imageUrl, setImageUrl] = useState("");
-  const [sort, setSort] = useState<string>("100");
-  const [isActive, setIsActive] = useState(true);
+  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
   const activeCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows]);
+
+  async function loadCategories() {
+    const { data } = await supabase.from("menu_categories").select("key,label").order("sort", { ascending: true });
+    setCategories(mapCategoryRows(Array.isArray(data) ? data : []));
+  }
 
   async function uploadImage(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -135,7 +180,7 @@ export function AdminMenuPage() {
 
     try {
       const url = await uploadImage(imageFile);
-      setImageUrl(url);
+      setForm((prev) => ({ ...prev, imageUrl: url }));
     } catch (e) {
       setUploadErr(e instanceof Error ? e.message : "Ошибка загрузки");
     } finally {
@@ -161,6 +206,7 @@ export function AdminMenuPage() {
       setLoading(false);
       return;
     }
+
     const rowsToMap = Array.isArray(data) ? data : [];
     const nextRows: MenuItem[] = [];
     const errors: string[] = [];
@@ -176,47 +222,92 @@ export function AdminMenuPage() {
 
     if (errors.length > 0) {
       const details = errors.slice(0, MAX_ERROR_DETAILS).join("; ");
-      const suffix =
-        errors.length > MAX_ERROR_DETAILS
-          ? ` (+${errors.length - MAX_ERROR_DETAILS} ещё)`
-          : "";
-      setErr(`Часть данных не прошла валидацию и была пропущена. ${details}${suffix}`);
+      const suffix = errors.length > MAX_ERROR_DETAILS ? ` (+${errors.length - MAX_ERROR_DETAILS} ещё)` : "";
+      setErr(`Часть данных не прочитана: ${details}${suffix}`);
     }
 
     setRows(nextRows);
     setLoading(false);
   }
 
-  async function createItem() {
-    const p = Number(price);
-    const s = Number(sort);
-
-    if (!title.trim()) return alert("Название обязательно");
-    if (!Number.isFinite(p) || p <= 0) return alert("Цена должна быть > 0");
-
-    const payload = {
-      title: title.trim(),
-      description: description.trim() ? description.trim() : null,
-      category,
-      price: p,
-      image_url: imageUrl.trim() ? imageUrl.trim() : null,
-      is_active: !!isActive,
-      sort: Number.isFinite(s) ? s : 100,
-    };
-
-    const { error } = await supabase.from("menu_items").insert(payload);
-    if (error) return alert(error.message);
-
-    setTitle("");
-    setDescription("");
-    setImageUrl("");
+  function resetForm() {
+    setForm(INITIAL_FORM);
+    setFormError(null);
+    setEditingId(null);
     setImageFile(null);
     setUploadErr(null);
-    setPrice("590");
-    setSort("100");
-    setIsActive(true);
+  }
 
+  function validateForm(current: FormState) {
+    if (!current.title.trim()) {
+      return "Введите название";
+    }
+    if (!current.category || !isMenuCategory(current.category)) {
+      return "Выберите категорию";
+    }
+    const priceValue = Number(current.price);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      return "Введите корректную цену";
+    }
+    const sortValue = Number(current.sort);
+    if (!Number.isFinite(sortValue)) {
+      return "Введите корректную сортировку";
+    }
+    return null;
+  }
+
+  async function saveItem() {
+    const validationError = validateForm(form);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      category: form.category,
+      price: Number(form.price),
+      image_url: form.imageUrl.trim() || null,
+      is_active: form.isActive,
+      sort: Number(form.sort),
+    };
+
+    if (!payload.category) {
+      setFormError("Выберите категорию");
+      return;
+    }
+
+    if (editingId) {
+      const { error } = await supabase.from("menu_items").update(payload).eq("id", editingId);
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
+    } else {
+      const { error } = await supabase.from("menu_items").insert(payload);
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
+    }
+
+    resetForm();
     await load();
+  }
+
+  function startEdit(item: MenuItem) {
+    setEditingId(item.id);
+    setForm({
+      title: item.title,
+      description: item.description ?? "",
+      category: item.category,
+      price: String(item.price),
+      imageUrl: item.image_url ?? "",
+      sort: String(item.sort),
+      isActive: item.is_active,
+    });
+    setFormError(null);
   }
 
   async function updateItem(id: string, patch: Partial<MenuItem>) {
@@ -229,119 +320,86 @@ export function AdminMenuPage() {
     if (!confirm("Удалить позицию?")) return;
     const { error } = await supabase.from("menu_items").delete().eq("id", id);
     if (error) return alert(error.message);
+    if (editingId === id) {
+      resetForm();
+    }
     await load();
   }
 
   useEffect(() => {
-    void load();
+    void Promise.all([load(), loadCategories()]);
   }, []);
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-white/70">
-          Редактор меню (таблица <code>menu_items</code>). Активных:{" "}
-          <span className="text-white font-bold">{activeCount}</span> / {rows.length}
+          Редактор меню (таблица <code>menu_items</code>). Активных: <span className="text-white font-bold">{activeCount}</span> / {rows.length}
         </div>
-        <div className="flex gap-2">
-          <Button variant="soft" onClick={load} disabled={loading}>
-            Обновить
-          </Button>
-        </div>
+        <Button variant="soft" onClick={() => void Promise.all([load(), loadCategories()])} disabled={loading}>
+          Обновить
+        </Button>
       </div>
 
-      {err && (
-        <div className="mt-4 p-3 rounded-2xl bg-danger/15 border border-danger/30 text-sm text-white">
-          {err}
-          <div className="text-white/70 mt-1">
-            Скорее всего ты ещё не выполнил SQL-setup для меню. Он лежит в <code>supabase_menu.sql</code>.
-          </div>
-        </div>
-      )}
+      {err && <div className="mt-4 p-3 rounded-2xl bg-danger/15 border border-danger/30 text-sm text-white">{err}</div>}
 
-      {/* Create */}
       <div className="mt-5 rounded-2xl p-4 bg-black/20 border border-white/10">
-        <div className="font-bold">Добавить позицию</div>
+        <div className="font-bold">{editingId ? "Редактировать позицию" : "Добавить позицию"}</div>
 
         <div className="mt-3 grid md:grid-cols-2 gap-3">
           <div className="grid gap-2">
-            <Input placeholder="Название (например: Пепперони)" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Input
-              placeholder="Описание (опционально)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <Input
-              placeholder="Ссылка на фото (опционально)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
+            <Input placeholder="Название" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
+            <Input placeholder="Описание (опционально)" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+            <Input placeholder="Ссылка на фото (опционально)" value={form.imageUrl} onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))} />
             <label className="text-sm text-white/70">
               Фото файла (загрузка в Supabase Storage)
-              <input
-                type="file"
-                accept="image/*"
-                className="mt-1 block w-full text-sm text-white/70"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-              />
+              <input type="file" accept="image/*" className="mt-1 block w-full text-sm text-white/70" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="soft" onClick={handleUpload} disabled={uploading || !imageFile}>
-                {uploading ? "Загрузка…" : "Загрузить фото"}
-              </Button>
-              {imageFile && (
-                <div className="text-xs text-white/60">
-                  {imageFile.name} • {(imageFile.size / 1024 / 1024).toFixed(2)} MB
-                </div>
-              )}
+              <Button variant="soft" onClick={handleUpload} disabled={uploading || !imageFile}>{uploading ? "Загрузка…" : "Загрузить фото"}</Button>
+              {imageFile && <div className="text-xs text-white/60">{imageFile.name}</div>}
             </div>
             {uploadErr && <div className="text-xs text-danger">{uploadErr}</div>}
-            <div className="text-xs text-white/50">
-              Требуется публичный bucket <code>menu</code>. Если не настроен — используй прямую ссылку.
-            </div>
           </div>
 
           <div className="grid gap-2">
             <label className="text-sm text-white/70">
-              Категория
+              Категория *
               <select
                 className="mt-1 w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-white"
-                value={category}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (isMenuCategory(next)) {
-                    setCategory(next);
-                  }
-                }}
+                value={form.category}
+                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as MenuCategory }))}
+                required
               >
-                {menuCategoryList.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
+                <option value="">Выберите категорию</option>
+                {categories.map((category) => (
+                  <option key={category.key} value={category.key}>{category.label}</option>
                 ))}
               </select>
             </label>
 
             <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Цена ₽" value={price} onChange={(e) => setPrice(e.target.value)} />
-              <Input placeholder="Сортировка" value={sort} onChange={(e) => setSort(e.target.value)} />
+              <Input placeholder="Цена ₽" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} />
+              <Input placeholder="Сортировка" value={form.sort} onChange={(e) => setForm((p) => ({ ...p, sort: e.target.value }))} />
             </div>
 
             <label className="flex items-center gap-2 text-sm text-white/80">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-              />
+              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
               Активно (видно клиентам)
             </label>
 
-            <Button onClick={createItem}>Добавить</Button>
+            {formError && <div className="text-sm text-danger">{formError}</div>}
+
+            <div className="flex gap-2">
+              <Button onClick={saveItem}>{editingId ? "Сохранить" : "Добавить"}</Button>
+              {editingId ? (
+                <Button variant="soft" onClick={resetForm}>Отмена</Button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* List */}
       <div className="mt-5 grid gap-3">
         {loading && <div className="text-white/70">Загрузка…</div>}
         {!loading && rows.length === 0 && !err && <div className="text-white/60">Пока пусто</div>}
@@ -352,23 +410,10 @@ export function AdminMenuPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="font-black text-lg">{r.title}</div>
-                  <Badge>
-                    {menuCategoryList.find((c) => c.value === r.category)?.label ?? r.category}
-                  </Badge>
+                  <Badge>{categories.find((c) => c.key === r.category)?.label ?? r.category}</Badge>
                   {!r.is_active && <Badge>СКРЫТО</Badge>}
                 </div>
                 {r.description && <div className="text-white/70 text-sm mt-1">{r.description}</div>}
-                {r.image_url && (
-                  <div className="mt-2">
-                    <img
-                      src={r.image_url}
-                      alt={r.title}
-                      className="h-24 w-24 rounded-xl object-cover border border-white/10"
-                      loading="lazy"
-                    />
-                    <div className="text-white/60 text-xs mt-1 break-all">{r.image_url}</div>
-                  </div>
-                )}
               </div>
 
               <div className="text-right">
@@ -377,63 +422,31 @@ export function AdminMenuPage() {
               </div>
             </div>
 
-            <div className="mt-3 grid md:grid-cols-6 gap-2">
-              <Button
-                variant={r.is_active ? "soft" : "primary"}
-                onClick={() => updateItem(r.id, { is_active: !r.is_active })}
-              >
-                {r.is_active ? "Скрыть" : "Показать"}
-              </Button>
-
-              <Button
-                variant="soft"
-                onClick={() => {
-                  const v = prompt("Новая цена ₽", String(r.price));
-                  if (v === null) return;
-                  const n = Number(v);
-                  if (!Number.isFinite(n) || n <= 0) return alert("Неверная цена");
-                  void updateItem(r.id, { price: n });
-                }}
-              >
-                Изменить цену
-              </Button>
-
-              <Button
-                variant="soft"
-                onClick={() => {
-                  const v = prompt("Сортировка (меньше = выше)", String(r.sort));
-                  if (v === null) return;
-                  const n = Number(v);
-                  if (!Number.isFinite(n)) return alert("Неверная сортировка");
-                  void updateItem(r.id, { sort: n });
-                }}
-              >
-                Сортировка
-              </Button>
-
-              <Button
-                variant="soft"
-                onClick={() => {
-                  const v = prompt("Ссылка на фото", r.image_url ?? "");
-                  if (v === null) return;
-                  const next = v.trim();
-                  void updateItem(r.id, { image_url: next ? next : null });
-                }}
-              >
-                Фото (URL)
-              </Button>
-
-              <Button
-                variant="soft"
-                disabled={!r.image_url}
-                onClick={() => updateItem(r.id, { image_url: null })}
-              >
-                Очистить фото
-              </Button>
-
-              <Button variant="danger" onClick={() => removeItem(r.id)}>
-                Удалить
-              </Button>
+            <div className="mt-3 grid md:grid-cols-7 gap-2">
+              <Button variant={r.is_active ? "soft" : "primary"} onClick={() => void updateItem(r.id, { is_active: !r.is_active })}>{r.is_active ? "Скрыть" : "Показать"}</Button>
+              <Button variant="soft" onClick={() => startEdit(r)}>Редактировать</Button>
+              <Button variant="soft" onClick={() => {
+                const v = prompt("Новая цена ₽", String(r.price));
+                if (v === null) return;
+                const n = Number(v);
+                if (!Number.isFinite(n) || n <= 0) return alert("Неверная цена");
+                void updateItem(r.id, { price: n });
+              }}>Изменить цену</Button>
+              <Button variant="soft" onClick={() => {
+                const v = prompt("Сортировка (меньше = выше)", String(r.sort));
+                if (v === null) return;
+                const n = Number(v);
+                if (!Number.isFinite(n)) return alert("Неверная сортировка");
+                void updateItem(r.id, { sort: n });
+              }}>Сортировка</Button>
+              <Button variant="soft" onClick={() => {
+                const v = prompt("Ссылка на фото", r.image_url ?? "");
+                if (v === null) return;
+                const next = v.trim();
+                void updateItem(r.id, { image_url: next ? next : null });
+              }}>Фото (URL)</Button>
+              <Button variant="soft" disabled={!r.image_url} onClick={() => void updateItem(r.id, { image_url: null })}>Очистить фото</Button>
+              <Button variant="danger" onClick={() => void removeItem(r.id)}>Удалить</Button>
             </div>
           </div>
         ))}
