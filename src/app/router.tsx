@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "./layout/RootLayout";
 import { HomePage } from "../pages/HomePage";
 import { MenuPage } from "../pages/MenuPage";
+import { MenuCategoryPage } from "../pages/MenuCategoryPage";
 import { PizzaPage } from "../pages/PizzaPage";
 import { CartPage } from "../pages/CartPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "menu", element: <MenuPage /> },
+      { path: "menu/:category", element: <MenuCategoryPage /> },
       { path: "pizza/:id", element: <PizzaPage /> },
       { path: "cart", element: <CartPage /> },
       { path: "checkout", element: <CheckoutPage /> },

@@ -66,6 +66,44 @@ create table if not exists public.menu_items (
   sort int not null default 100
 );
 
+
+
+-- categories table for public menu banners/admin select
+create table if not exists public.menu_categories (
+  key menu_category primary key,
+  label text not null,
+  full_label text not null,
+  image_url text,
+  fallback_background text not null default 'linear-gradient(135deg, #334155 0%, #0f172a 100%)',
+  sort int not null default 100,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+insert into public.menu_categories(key, label, full_label, image_url, fallback_background, sort, is_active)
+values
+  ('classic','Классические','Классические пиццы','https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #c2410c 0%, #7c2d12 100%)',10,true),
+  ('signature','Фирменные','Фирменные пиццы','https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #9a3412 0%, #7f1d1d 100%)',20,true),
+  ('roman','Римские','Римские пиццы','https://images.unsplash.com/photo-1598023696416-0193a0bcd302?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #713f12 0%, #422006 100%)',30,true),
+  ('seasonal','Сезонные','Сезонные пиццы','https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #166534 0%, #14532d 100%)',40,true),
+  ('cold','Холодные','Холодная пицца','https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%)',50,true),
+  ('fried','Жареные','Жареные закуски','https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',60,true),
+  ('desserts','Сладости','Сладости','https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #db2777 0%, #9d174d 100%)',70,true),
+  ('drinks','Напитки','Напитки','https://images.unsplash.com/photo-1551024709-8f23befc6cf7?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #0f766e 0%, #134e4a 100%)',80,true)
+on conflict (key) do update
+set label = excluded.label,
+    full_label = excluded.full_label,
+    image_url = excluded.image_url,
+    fallback_background = excluded.fallback_background,
+    sort = excluded.sort;
+
+alter table public.menu_items
+  drop constraint if exists menu_items_category_fkey;
+
+alter table public.menu_items
+  add constraint menu_items_category_fkey
+  foreign key (category) references public.menu_categories(key) on update cascade;
+
 -- RLS
 alter table public.menu_items enable row level security;
 
@@ -109,3 +147,19 @@ using (public.current_role() in ('admin','engineer','manager'));
 -- ('Маргарита', 'Соус, сыр, базилик', 'classic', 520, true, 10),
 -- ('Пепперони', 'Соус, сыр, пепперони', 'classic', 590, true, 20),
 -- ('Кола 0.5', null, 'drinks', 120, true, 10);
+
+
+alter table public.menu_categories enable row level security;
+
+drop policy if exists "menu_categories_public_read_active" on public.menu_categories;
+create policy "menu_categories_public_read_active"
+on public.menu_categories
+for select
+using (is_active = true);
+
+drop policy if exists "menu_categories_staff_manage" on public.menu_categories;
+create policy "menu_categories_staff_manage"
+on public.menu_categories
+for all
+using (public.current_role() in ('admin','engineer','manager'))
+with check (public.current_role() in ('admin','engineer','manager'));

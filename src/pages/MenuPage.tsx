@@ -1,61 +1,25 @@
-import { useMemo, useState } from "react";
-import { categories } from "../data/menu";
-import { type MenuCategory } from "../data/menuCategories";
-import { Tabs } from "../components/ui/Tabs";
-import { PizzaCard } from "../components/cards/PizzaCard";
-import { useMenuItems } from "../shared/hooks/useMenuItems";
+import { CategoryBannerTile } from "../components/cards/CategoryBannerTile";
+import { useMenuCategories } from "../shared/hooks/useMenuCategories";
 
 export function MenuPage() {
-  const [cat, setCat] = useState<MenuCategory>("classic");
-  const { items, loading, error, hasSupabaseEnv } = useMenuItems();
-  const activeCategory = useMemo(() => categories.find((c) => c.key === cat), [cat]);
-
-  const itemsForCategory = useMemo(() => items.filter((x) => x.category === cat), [items, cat]);
+  const { categories } = useMenuCategories();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black">Меню</h1>
-          <div className="mt-2 text-white/70">Категории, карточки, быстрый заказ.</div>
-        </div>
-        <Tabs
-          value={cat}
-          onChange={setCat}
-          items={categories.map((c) => ({ value: c.key, label: c.label }))}
-        />
+    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-10">
+      <div className="mb-5">
+        <h1 className="text-3xl font-black">Меню</h1>
+        <p className="mt-2 text-white/70">Выберите категорию и переходите к позициям.</p>
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
-          Не удалось загрузить меню из базы данных. Показаны демо-данные.
-        </div>
-      )}
-
-      {!hasSupabaseEnv && (
-        <div className="mt-4 rounded-2xl p-3 bg-black/20 border border-white/10 text-sm text-white/70">
-          Supabase не настроен. Показаны демо-данные из проекта.
-        </div>
-      )}
-
-      {activeCategory && (
-        <div
-          className="mt-4 rounded-2xl p-4 border border-white/10 text-white/90"
-          style={{ backgroundImage: activeCategory.background }}
-        >
-          <div className="text-sm uppercase tracking-wide text-white/70">Категория</div>
-          <div className="text-xl font-semibold">{activeCategory.label}</div>
-        </div>
-      )}
-
-      {loading && <div className="mt-6 text-white/70">Загрузка меню…</div>}
-
-      <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {!loading && itemsForCategory.length === 0 && (
-          <div className="text-white/60">В этой категории пока нет позиций.</div>
-        )}
-        {itemsForCategory.map((x) => (
-          <PizzaCard key={x.id} item={x} />
+      <div className="grid gap-4 sm:gap-[18px]">
+        {categories.map((category) => (
+          <CategoryBannerTile
+            key={category.key}
+            slug={category.key}
+            title={category.fullLabel}
+            imageUrl={category.imageUrl}
+            fallbackBackground={category.background}
+          />
         ))}
       </div>
     </div>

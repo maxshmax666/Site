@@ -1,4 +1,4 @@
-import { menuCategoryList, type MenuCategory } from "./menuCategories";
+import { defaultMenuCategories, menuCategoryList, type MenuCategory } from "./menuCategories";
 
 export type MenuItem = {
   id: string;
@@ -7,27 +7,18 @@ export type MenuItem = {
   desc: string;
   priceFrom: number;
   badges?: Array<"hit" | "new" | "spicy">;
-  // Фоны задаём текстовыми градиентами или data-URI, чтобы избегать бинарников в PR.
+  // Фоны задаём текстовыми градиентами или удалёнными URL, чтобы избегать бинарников в PR.
   background?: string;
+  image?: string;
 };
 
-// Фоны категорий — текстовые градиенты, чтобы не тащить бинарные ассеты в PR.
-const categoryBackgrounds: Record<MenuCategory, string> = {
-  classic: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
-  signature: "linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%)",
-  roman: "linear-gradient(135deg, #9a3412 0%, #431407 100%)",
-  seasonal: "linear-gradient(135deg, #047857 0%, #064e3b 100%)",
-  cold: "linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%)",
-  fried: "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)",
-  desserts: "linear-gradient(135deg, #db2777 0%, #9d174d 100%)",
-  drinks: "linear-gradient(135deg, #0f766e 0%, #134e4a 100%)",
-};
-
-export const categories: Array<{ key: MenuCategory; label: string; background: string }> =
-  menuCategoryList.map(({ value, label }) => ({
-    key: value,
-    label,
-    background: categoryBackgrounds[value],
+export const categories: Array<{ key: MenuCategory; label: string; fullLabel: string; background: string; imageUrl?: string }> =
+  defaultMenuCategories.map((category) => ({
+    key: category.value,
+    label: category.label,
+    fullLabel: category.fullLabel,
+    background: category.fallbackBackground,
+    imageUrl: category.imageUrl,
   }));
 
 export const menu: MenuItem[] = [
