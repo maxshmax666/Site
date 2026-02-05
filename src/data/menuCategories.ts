@@ -10,3 +10,9 @@ export const menuCategoryList = [
 ] as const;
 
 export type MenuCategory = (typeof menuCategoryList)[number]["value"];
+
+const menuCategorySet = new Set<MenuCategory>(menuCategoryList.map((category) => category.value));
+
+export function isMenuCategory(value: string): value is MenuCategory {
+  return menuCategorySet.has(value as MenuCategory);
+}

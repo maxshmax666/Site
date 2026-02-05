@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
-import { type MenuCategory } from "../../data/menuCategories";
+import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 
 type DbMenuItem = {
   id: string;
@@ -26,9 +26,10 @@ const hasSupabaseEnv =
   Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 function mapDbItem(item: DbMenuItem): MenuItem {
+  const category: MenuCategory = isMenuCategory(item.category) ? item.category : "classic";
   return {
     id: item.id,
-    category: item.category,
+    category,
     title: item.title,
     desc: item.description ?? "",
     priceFrom: Number(item.price ?? 0),
