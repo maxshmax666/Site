@@ -1,5 +1,5 @@
 import React from "react";
-import { supabase } from "@/shared/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import ReactDOM from "react-dom/client";
 import { App } from "./app/App";
 import "./styles/globals.css";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/supabaseClient";
+import { supabase } from "@/lib/supabase";
 
 export type AppRole = "guest" | "courier" | "manager" | "engineer" | "admin";
 
