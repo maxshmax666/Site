@@ -1,7 +1,12 @@
 import { categories, menu } from "../../src/data/menu";
-import { json } from "./_utils";
+import { ensureRequiredApiEnv, type ApiEnv, json } from "./_utils";
 
-export const onRequestGet: PagesFunction = async () => {
+export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
+  const envError = ensureRequiredApiEnv(env);
+  if (envError) {
+    return envError;
+  }
+
   return json(
     {
       categories,

@@ -1,10 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { json } from "../_utils";
-
-type Env = {
-  SUPABASE_URL?: string;
-  SUPABASE_ANON_KEY?: string;
-};
+import { ensureRequiredApiEnv, resolveSupabaseOrigin, type ApiEnv, json } from "../_utils";
 
 function getBearerToken(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
@@ -20,17 +15,23 @@ function getBearerToken(request: Request): string | null {
   return token;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<ApiEnv> = async ({ request, env }) => {
+  const envError = ensureRequiredApiEnv(env);
+  if (envError) {
+    return envError;
+  }
+
   const token = getBearerToken(request);
   if (!token) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+  const supabaseOrigin = resolveSupabaseOrigin(env);
+  if (!supabaseOrigin || !env.SUPABASE_ANON_KEY) {
+    return json({ code: "MISCONFIGURED_ENV", error: "Required runtime environment variables are missing" }, { status: 500 });
   }
 
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+  const supabase = createClient(supabaseOrigin, env.SUPABASE_ANON_KEY, {
     global: {
       headers: {
         Authorization: `Bearer ${token}`,
