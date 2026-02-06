@@ -16,8 +16,7 @@ npm run preview
 - Build command: `npm run build`
 - Output directory: `dist`
 - Functions directory: `functions` (Cloudflare Pages Functions enabled автоматически, если директория существует в репозитории)
-- Для SPA-роутинга используется `_routes.json` (а не `_redirects`).
-  `_redirects` на Pages конфликтует с HTML-нормализацией (strip `.html`/`/index`) и может приводить к loop, поэтому применяем нативный механизм маршрутизации.
+- Для Cloudflare Pages Functions используется `_routes.json`, чтобы ограничить запуск Worker только на `/api/*` и не проксировать статические ассеты через Functions.
 
 ### API на Pages Functions
 
@@ -47,14 +46,9 @@ curl -i https://tagil.pizza/api/auth/me
 Пример `public/_routes.json`:
 ```json
 {
-  "include": ["/*"],
-  "exclude": [
-    "/assets/*",
-    "/*.css",
-    "/*.js",
-    "/*.map",
-    "/favicon.ico"
-  ]
+  "version": 1,
+  "include": ["/api/*"],
+  "exclude": []
 }
 ```
 
