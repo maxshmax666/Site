@@ -169,6 +169,7 @@ drop policy if exists "orders_select_own" on public.orders;
 create policy "orders_select_own"
 on public.orders
 for select
+to authenticated
 using (created_by = auth.uid());
 
 -- admin/engineer/manager/courier can read orders (courier sees assigned + READY/COURIER/DELIVERED)
@@ -176,6 +177,7 @@ drop policy if exists "orders_staff_select" on public.orders;
 create policy "orders_staff_select"
 on public.orders
 for select
+to authenticated
 using (
   public.current_role() in ('admin','engineer','manager')
   or (
@@ -197,6 +199,7 @@ drop policy if exists "order_items_select_via_order" on public.order_items;
 create policy "order_items_select_via_order"
 on public.order_items
 for select
+to authenticated
 using (
   exists (
     select 1 from public.orders o

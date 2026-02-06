@@ -15,7 +15,7 @@ export function OrderSuccessPage() {
         <div className="text-xl font-black break-all">{id}</div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={() => nav("/profile")}>К моим заказам</Button>
+          <Button onClick={() => nav("/profile?tab=orders#orders-history")}>К моим заказам</Button>
           <Button variant="soft" onClick={() => nav("/menu")}>Продолжить выбор</Button>
         </div>
       </div>
