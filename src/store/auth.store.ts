@@ -14,6 +14,7 @@ type AuthState = {
   roleError: string | null;
 
   init: () => Promise<void>;
+  syncSessionFromSupabase: () => Promise<void>;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -123,6 +124,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return set({ role: "guest", roleError: null });
     const res = await fetchRole();
     set({ role: res.role, roleError: res.error });
+  },
+
+  syncSessionFromSupabase: async () => {
+    if (!supabase) {
+      set({
+        session: null,
+        user: null,
+        role: "guest",
+        roleError: "Supabase не настроен. Работаем в демо-режиме.",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn("supabase.getSession error:", error);
+    }
+
+    const session = data.session ?? null;
+    const user = session?.user ?? null;
+    set({ session, user });
+
+    if (user) {
+      const res = await fetchRole();
+      set({ role: res.role, roleError: res.error });
+      return;
+    }
+
+    set({ role: "guest", roleError: null });
   },
 
   signOut: async () => {
