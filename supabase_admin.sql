@@ -15,9 +15,11 @@ end$$;
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   email text,
+  full_name text,
   role app_role not null default 'guest',
   created_at timestamptz not null default now()
 );
+alter table public.profiles add column if not exists full_name text;
 -- alter table public.profiles owner to supabase_admin;
 
 -- 3) orders table
@@ -172,7 +174,7 @@ for select
 to authenticated
 using (created_by = auth.uid());
 
--- admin/engineer/manager/courier can read orders (courier sees assigned + READY/COURIER/DELIVERED)
+-- admin/engineer/manager/courier can read orders (courier sees assigned only)
 drop policy if exists "orders_staff_select" on public.orders;
 create policy "orders_staff_select"
 on public.orders
@@ -180,10 +182,7 @@ for select
 to authenticated
 using (
   public.current_role() in ('admin','engineer','manager')
-  or (
-    public.current_role() = 'courier'
-    and (courier_id = auth.uid() or status in ('READY','COURIER','DELIVERED'))
-  )
+  or (public.current_role() = 'courier' and courier_id = auth.uid())
 );
 
 -- staff can update status/assignment
@@ -191,8 +190,8 @@ drop policy if exists "orders_staff_update" on public.orders;
 create policy "orders_staff_update"
 on public.orders
 for update
-using (public.current_role() in ('admin','engineer','manager','courier'))
-with check (public.current_role() in ('admin','engineer','manager','courier'));
+using (public.current_role() in ('admin','engineer','manager'))
+with check (public.current_role() in ('admin','engineer','manager'));
 
 -- Order items:
 drop policy if exists "order_items_select_via_order" on public.order_items;
@@ -207,7 +206,7 @@ using (
       and (
         o.created_by = auth.uid()
         or public.current_role() in ('admin','engineer','manager')
-        or (public.current_role()='courier' and (o.courier_id=auth.uid() or o.status in ('READY','COURIER','DELIVERED')))
+        or (public.current_role()='courier' and o.courier_id=auth.uid())
       )
   )
 );
