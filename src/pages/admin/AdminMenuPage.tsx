@@ -34,6 +34,7 @@ type FormState = {
 };
 
 const MAX_ERROR_DETAILS = 5;
+const MENU_CATEGORY_MIGRATION_ERROR = "Схема БД не мигрирована: menu_category";
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -100,6 +101,13 @@ function mapDbItem(raw: Record<string, unknown>): MenuItem {
 function money(n: number) {
   if (!Number.isFinite(n)) return "0 ₽";
   return `${Math.round(n)} ₽`;
+}
+
+function getDbErrorMessage(error: { code?: string; message: string }) {
+  if (error.code === "22P02") {
+    return `${MENU_CATEGORY_MIGRATION_ERROR}. ${error.message}`;
+  }
+  return error.message;
 }
 
 function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
@@ -202,7 +210,7 @@ export function AdminMenuPage() {
       .limit(500);
 
     if (error) {
-      setErr(error.message);
+      setErr(getDbErrorMessage(error));
       setRows([]);
       setLoading(false);
       return;
@@ -282,13 +290,13 @@ export function AdminMenuPage() {
     if (editingId) {
       const { error } = await supabase.from("menu_items").update(payload).eq("id", editingId);
       if (error) {
-        setFormError(error.message);
+        setFormError(getDbErrorMessage(error));
         return;
       }
     } else {
       const { error } = await supabase.from("menu_items").insert(payload);
       if (error) {
-        setFormError(error.message);
+        setFormError(getDbErrorMessage(error));
         return;
       }
     }
@@ -313,14 +321,14 @@ export function AdminMenuPage() {
 
   async function updateItem(id: string, patch: Partial<MenuItem>) {
     const { error } = await supabase.from("menu_items").update(patch).eq("id", id);
-    if (error) return alert(error.message);
+    if (error) return alert(getDbErrorMessage(error));
     await load();
   }
 
   async function removeItem(id: string) {
     if (!confirm("Удалить позицию?")) return;
     const { error } = await supabase.from("menu_items").delete().eq("id", id);
-    if (error) return alert(error.message);
+    if (error) return alert(getDbErrorMessage(error));
     if (editingId === id) {
       resetForm();
     }
