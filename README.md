@@ -47,6 +47,48 @@ npm run preview
 
 ## Кейтеринг: форма + endpoint контракт
 
+## Назначение первой admin-роли вручную
+
+После применения `supabase_admin.sql` назначение первой admin-роли выполняется **отдельно вручную** через `supabase_admin_role_grants.sql`.
+
+⚠️ Важно по безопасности:
+- не храните реальные production email/UUID в репозитории;
+- перед запуском оператор должен вручную подставить целевые `email`/`user_id` в CTE `params`.
+
+Явный SQL (из runbook, с плейсхолдерами):
+
+```sql
+begin;
+
+with params as (
+  select
+    'change-me-admin@example.com'::text as target_email,
+    '00000000-0000-0000-0000-000000000000'::uuid as target_user_id
+),
+upsert_from_email as (
+  insert into public.profiles(user_id, email, role)
+  select u.id, u.email, 'admin'::app_role
+  from auth.users u
+  join params p on u.email = p.target_email
+  on conflict (user_id) do update
+  set role = excluded.role,
+      email = excluded.email
+  returning user_id
+),
+update_from_uuid as (
+  update public.profiles p
+  set role = 'admin'::app_role
+  from params prm
+  where p.user_id = prm.target_user_id
+  returning p.user_id
+)
+select
+  (select count(*) from upsert_from_email) as granted_by_email,
+  (select count(*) from update_from_uuid) as granted_by_uuid;
+
+commit;
+```
+
 ### Минимальные требования
 - Node.js: `>=18.18` (рекомендуется LTS 20+).
 - `@supabase/supabase-js`: `^2.93.3`.
