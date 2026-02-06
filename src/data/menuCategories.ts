@@ -12,7 +12,7 @@ export const defaultMenuCategories = [
     label: "Классические",
     fullLabel: "Классические пиццы",
     imageUrl:
-      "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1600&q=80",
+      "https://fhgcdbdsetysklpfrnbv.supabase.co/storage/v1/object/sign/Pizza/margarita1.webp?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jYWE4NDE1OS02MWRjLTQ5MzktOTUwZi00YmYzY2ExNDZlNTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJQaXp6YS9tYXJnYXJpdGExLndlYnAiLCJpYXQiOjE3NzAzNzgxNDcsImV4cCI6MTgzMjU4NjE0N30.K2Fl0_n-yU7lX-mlVQ9c90JU1TUzBnWJl3uYN6DgF2U",
     fallbackBackground: "linear-gradient(135deg, #c2410c 0%, #7c2d12 100%)",
   },
   {
