@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { categories as fallbackCategories } from "../../data/menu";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
-import { hasSupabaseEnv, supabase } from "@/lib/supabase";
-import { normalizeSupabaseError, type AppError } from "@/lib/errors";
+import { type AppError } from "@/lib/errors";
+import { fetchJson, isApiClientError } from "@/lib/apiClient";
 
 export type MenuCategoryItem = {
   key: MenuCategory;
@@ -13,75 +13,79 @@ export type MenuCategoryItem = {
   sort: number;
 };
 
-type DbCategory = {
-  key: string;
-  label: string;
-  full_label: string | null;
-  image_url: string | null;
-  fallback_background: string | null;
-  sort: number;
-};
-
 type UseMenuCategoriesResult = {
   categories: MenuCategoryItem[];
   error: AppError | null;
   reloadCategories: () => Promise<void>;
 };
 
+type MenuApiResponse = {
+  categories?: Array<{
+    key: string;
+    label: string;
+    fullLabel?: string;
+    imageUrl?: string;
+    background?: string;
+  }>;
+};
+
+const MENU_API_URL = "/api/menu";
+
+const fallbackCategoryItems: MenuCategoryItem[] = fallbackCategories.map((category, idx) => ({
+  ...category,
+  sort: idx * 10 + 10,
+}));
+
 export function useMenuCategories(): UseMenuCategoriesResult {
-  const [categories, setCategories] = useState<MenuCategoryItem[]>(
-    fallbackCategories.map((category, idx) => ({ ...category, sort: idx * 10 + 10 })),
-  );
+  const [categories, setCategories] = useState<MenuCategoryItem[]>(fallbackCategoryItems);
   const [error, setError] = useState<AppError | null>(null);
 
   const load = useCallback(async () => {
-    if (!hasSupabaseEnv || !supabase) {
-      setError(null);
-      return;
-    }
-
     setError(null);
 
-    const { data, error: supaError } = await supabase
-      .from("menu_categories")
-      .select("key,label,full_label,image_url,fallback_background,sort")
-      .order("sort", { ascending: true });
+    try {
+      const payload = await fetchJson<MenuApiResponse>(MENU_API_URL, { timeoutMs: 8_000 });
+      const next = (payload.categories ?? [])
+        .filter((category) => isMenuCategory(category.key))
+        .map(
+          (category, idx) =>
+            ({
+              key: category.key,
+              label: category.label,
+              fullLabel: category.fullLabel?.trim() || category.label,
+              imageUrl: category.imageUrl,
+              background: category.background ?? "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
+              sort: idx * 10 + 10,
+            }) satisfies MenuCategoryItem,
+        );
 
-    if (supaError) {
-      if (import.meta.env.DEV) {
-        console.error("[menu_categories] Supabase error", supaError);
+      if (next.length > 0) {
+        setCategories(next);
       } else {
-        console.error("MENU_CATEGORIES_LOAD_FAILED");
+        setCategories(fallbackCategoryItems);
+      }
+    } catch (requestError) {
+      if (isApiClientError(requestError)) {
+        const diagnosticCode = `MENU_CATEGORIES_LOAD_FAILED:${requestError.code}`;
+        console.error("MENU_CATEGORIES_LOAD_FAILED", {
+          diagnosticCode,
+          url: requestError.url,
+          status: requestError.status,
+          message: requestError.message,
+        });
+        setError({
+          code: diagnosticCode,
+          message: "Не удалось загрузить категории меню. Показаны резервные категории.",
+        });
+      } else {
+        console.error("MENU_CATEGORIES_LOAD_FAILED", requestError);
+        setError({
+          code: "MENU_CATEGORIES_LOAD_FAILED:UNKNOWN",
+          message: "Не удалось загрузить категории меню. Показаны резервные категории.",
+        });
       }
 
-      setError(
-        normalizeSupabaseError(
-          "MENU_CATEGORIES_LOAD_FAILED",
-          "Не удалось загрузить категории меню из базы данных. Показаны демо-категории.",
-          supaError,
-        ),
-      );
-      return;
-    }
-
-    const next = (data ?? [])
-      .map((raw) => raw as DbCategory)
-      .filter((category) => isMenuCategory(category.key))
-      .map(
-        (category) =>
-          ({
-            key: category.key,
-            label: category.label,
-            fullLabel: category.full_label?.trim() || category.label,
-            imageUrl: category.image_url ?? undefined,
-            background:
-              category.fallback_background ?? "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
-            sort: Number.isFinite(category.sort) ? category.sort : 100,
-          }) satisfies MenuCategoryItem,
-      );
-
-    if (next.length > 0) {
-      setCategories(next);
+      setCategories(fallbackCategoryItems);
     }
   }, []);
 

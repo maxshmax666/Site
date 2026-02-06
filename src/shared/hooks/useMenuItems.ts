@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
-import { normalizeSupabaseError, type AppError } from "@/lib/errors";
-
-type DbMenuItem = {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  price: number;
-  image_url: string | null;
-  is_active: boolean;
-  sort: number;
-};
+import { type AppError } from "@/lib/errors";
+import { fetchJson, isApiClientError } from "@/lib/apiClient";
 
 type UseMenuItemsResult = {
   items: MenuItem[];
@@ -22,17 +11,11 @@ type UseMenuItemsResult = {
   hasSupabaseEnv: boolean;
 };
 
-function mapDbItem(item: DbMenuItem): MenuItem {
-  return {
-    id: item.id,
-    category: item.category,
-    title: item.title,
-    desc: item.description ?? "",
-    priceFrom: Number(item.price ?? 0),
-    badges: undefined,
-    image: item.image_url ?? undefined,
-  };
-}
+type MenuApiResponse = {
+  items?: MenuItem[];
+};
+
+const MENU_API_URL = "/api/menu";
 
 export function useMenuItems(): UseMenuItemsResult {
   const [items, setItems] = useState<MenuItem[]>(fallbackMenu);
@@ -40,46 +23,37 @@ export function useMenuItems(): UseMenuItemsResult {
   const [error, setError] = useState<AppError | null>(null);
 
   const load = useCallback(async () => {
-    if (!hasSupabaseEnv || !supabase) {
-      setLoading(false);
-      setError(null);
-      setItems(fallbackMenu);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
-    const { data, error: supaError } = await supabase
-      .from("menu_items")
-      .select("id,title,description,category,price,image_url,is_active,sort")
-      .eq("is_active", true)
-      .order("category", { ascending: true })
-      .order("sort", { ascending: true })
-      .order("created_at", { ascending: false })
-      .limit(500);
+    try {
+      const payload = await fetchJson<MenuApiResponse>(MENU_API_URL, { timeoutMs: 8_000 });
+      setItems(Array.isArray(payload.items) ? payload.items : fallbackMenu);
+    } catch (requestError) {
+      if (isApiClientError(requestError)) {
+        const diagnosticCode = `MENU_LOAD_FAILED:${requestError.code}`;
+        console.error("MENU_LOAD_FAILED", {
+          diagnosticCode,
+          url: requestError.url,
+          status: requestError.status,
+          message: requestError.message,
+        });
 
-    if (supaError) {
-      if (import.meta.env.DEV) {
-        console.error("[menu_items] Supabase error", supaError);
+        setError({
+          code: diagnosticCode,
+          message: "Не удалось загрузить меню. Показаны резервные данные.",
+        });
       } else {
-        console.error("MENU_LOAD_FAILED");
+        console.error("MENU_LOAD_FAILED", requestError);
+        setError({
+          code: "MENU_LOAD_FAILED:UNKNOWN",
+          message: "Не удалось загрузить меню. Показаны резервные данные.",
+        });
       }
-
-      setError(
-        normalizeSupabaseError(
-          "MENU_LOAD_FAILED",
-          "Не удалось загрузить меню из базы данных. Показаны демо-данные.",
-          supaError,
-        ),
-      );
       setItems(fallbackMenu);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setItems((data ?? []).map((row) => mapDbItem(row as DbMenuItem)));
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -93,6 +67,6 @@ export function useMenuItems(): UseMenuItemsResult {
     loading,
     error,
     reload: load,
-    hasSupabaseEnv,
+    hasSupabaseEnv: true,
   };
 }

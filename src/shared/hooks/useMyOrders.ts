@@ -37,7 +37,7 @@ export type MyOrder = {
 type UseMyOrdersResult = {
   data: MyOrder[];
   loading: boolean;
-  error: string | null;
+  error: { message: string; status: number | null } | null;
   hasMore: boolean;
   loadMore: () => Promise<void>;
   reload: () => Promise<void>;
@@ -69,7 +69,7 @@ function toMyOrder(order: DbOrder, items: DbOrderItem[]): MyOrder {
 export function useMyOrders(userId?: string): UseMyOrdersResult {
   const [data, setData] = useState<MyOrder[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; status: number | null } | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
 
@@ -85,56 +85,61 @@ export function useMyOrders(userId?: string): UseMyOrdersResult {
       if (!hasSupabaseEnv || !supabase) {
         setData([]);
         setHasMore(false);
-        setError("Supabase не настроен. История заказов недоступна в демо-режиме.");
+        setError({ message: "Supabase не настроен. История заказов недоступна в демо-режиме.", status: null });
         return;
       }
 
       setLoading(true);
       setError(null);
 
-      const end = nextOffset + PAGE_SIZE - 1;
-      const { data: orders, error: ordersError } = await supabase
-        .from("orders")
-        .select("id,created_at,status,total,address,comment")
-        .eq("created_by", userId)
-        .order("created_at", { ascending: false })
-        .range(nextOffset, end);
+      try {
+        const end = nextOffset + PAGE_SIZE - 1;
+        const { data: orders, error: ordersError } = await supabase
+          .from("orders")
+          .select("id,created_at,status,total,address,comment")
+          .eq("created_by", userId)
+          .order("created_at", { ascending: false })
+          .range(nextOffset, end);
 
-      if (ordersError) {
-        setError(ordersError.message);
-        setLoading(false);
-        return;
-      }
-
-      const typedOrders = (orders ?? []) as DbOrder[];
-      if (typedOrders.length === 0) {
-        setHasMore(false);
-        if (mode === "replace") {
-          setData([]);
+        if (ordersError) {
+          setError({ message: ordersError.message, status: (ordersError as { status?: number }).status ?? null });
+          return;
         }
+
+        const typedOrders = (orders ?? []) as DbOrder[];
+        if (typedOrders.length === 0) {
+          setHasMore(false);
+          if (mode === "replace") {
+            setData([]);
+          }
+          return;
+        }
+
+        const orderIds = typedOrders.map((order) => order.id);
+        const { data: itemsData, error: itemsError } = await supabase
+          .from("order_items")
+          .select("order_id,title,qty,price")
+          .in("order_id", orderIds)
+          .order("id", { ascending: true });
+
+        if (itemsError) {
+          setError({ message: itemsError.message, status: (itemsError as { status?: number }).status ?? null });
+          return;
+        }
+
+        const mapped = typedOrders.map((order) => toMyOrder(order, (itemsData ?? []) as DbOrderItem[]));
+
+        setData((prev) => (mode === "append" ? [...prev, ...mapped] : mapped));
+        setHasMore(typedOrders.length === PAGE_SIZE);
+        setOffset(nextOffset + typedOrders.length);
+      } catch (e) {
+        setError({
+          message: e instanceof Error ? e.message : "Не удалось загрузить историю заказов.",
+          status: null,
+        });
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const orderIds = typedOrders.map((order) => order.id);
-      const { data: itemsData, error: itemsError } = await supabase
-        .from("order_items")
-        .select("order_id,title,qty,price")
-        .in("order_id", orderIds)
-        .order("id", { ascending: true });
-
-      if (itemsError) {
-        setError(itemsError.message);
-        setLoading(false);
-        return;
-      }
-
-      const mapped = typedOrders.map((order) => toMyOrder(order, (itemsData ?? []) as DbOrderItem[]));
-
-      setData((prev) => (mode === "append" ? [...prev, ...mapped] : mapped));
-      setHasMore(typedOrders.length === PAGE_SIZE);
-      setOffset(nextOffset + typedOrders.length);
-      setLoading(false);
     },
     [userId],
   );
