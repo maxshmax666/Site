@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 type DbOrder = {
   id: string;
@@ -79,6 +79,13 @@ export function useMyOrders(userId?: string): UseMyOrdersResult {
         setData([]);
         setHasMore(false);
         setError(null);
+        return;
+      }
+
+      if (!hasSupabaseEnv || !supabase) {
+        setData([]);
+        setHasMore(false);
+        setError("Supabase не настроен. История заказов недоступна в демо-режиме.");
         return;
       }
 

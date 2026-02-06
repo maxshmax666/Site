@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 export type Coordinates = [number, number];
 
@@ -26,8 +26,6 @@ type UseDeliveryZonesResult = {
   reload: () => Promise<void>;
 };
 
-const hasSupabaseEnv =
-  Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 function mapZone(zone: DbDeliveryZone): DeliveryZone {
   const ring = zone.polygon_geojson.coordinates[0] ?? [];
@@ -49,7 +47,7 @@ export function useDeliveryZones(): UseDeliveryZonesResult {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv || !supabase) {
       setZones([]);
       setLoading(false);
       setError("Supabase не настроен: добавьте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");

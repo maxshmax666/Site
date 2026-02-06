@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import { hasSupabaseEnv, supabase } from "../lib/supabase";
 import type { Role } from "../lib/roles";
 import { formatSupabaseError } from "../lib/errors";
 
@@ -25,6 +25,10 @@ function formatRoleError(error: { code?: string; message?: string }) {
 let authSubscriptionCleanup: (() => void) | null = null;
 
 async function fetchRole(): Promise<{ role: Role; error: string | null }> {
+  if (!supabase) {
+    return { role: "guest", error: "Supabase не настроен. Работаем в демо-режиме." };
+  }
+
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   const userId = userRes?.user?.id;
 
@@ -66,6 +70,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     authSubscriptionCleanup?.();
     authSubscriptionCleanup = null;
 
+    if (!hasSupabaseEnv || !supabase) {
+      set({
+        session: null,
+        user: null,
+        loading: false,
+        role: "guest",
+        roleError: "Supabase не настроен. Работаем в демо-режиме.",
+      });
+      return;
+    }
+
     // 1) initial session
     const { data, error } = await supabase.auth.getSession();
     if (error) console.warn("supabase.getSession error:", error);
@@ -102,6 +117,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refreshRole: async () => {
+    if (!supabase) return set({ role: "guest", roleError: "Supabase не настроен. Работаем в демо-режиме." });
+
     const user = get().user;
     if (!user) return set({ role: "guest", roleError: null });
     const res = await fetchRole();
@@ -109,6 +126,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    if (!supabase) {
+      set({ session: null, user: null, role: "guest", roleError: "Supabase не настроен. Работаем в демо-режиме." });
+      return;
+    }
+
     await supabase.auth.signOut();
     set({ session: null, user: null, role: "guest", roleError: null });
   },
