@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import type { Role } from "../lib/roles";
+import { formatSupabaseError } from "../lib/errors";
 
 type AuthState = {
   session: Session | null;
@@ -18,8 +19,10 @@ type AuthState = {
 };
 
 function formatRoleError(error: { code?: string; message?: string }) {
-  return error.message ?? "Не удалось прочитать роль из profiles.";
+  return formatSupabaseError(error, "Не удалось прочитать роль из profiles.");
 }
+
+let authSubscriptionCleanup: (() => void) | null = null;
 
 async function fetchRole(): Promise<{ role: Role; error: string | null }> {
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -60,6 +63,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   roleError: null,
 
   init: async () => {
+    authSubscriptionCleanup?.();
+    authSubscriptionCleanup = null;
+
     // 1) initial session
     const { data, error } = await supabase.auth.getSession();
     if (error) console.warn("supabase.getSession error:", error);
@@ -75,7 +81,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     // 3) subscribe
-    supabase.auth.onAuthStateChange(async (event, session2) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session2) => {
       set({ session: session2 ?? null, user: session2?.user ?? null, loading: false });
 
       if (event === "PASSWORD_RECOVERY") {
@@ -89,6 +95,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ role: "guest", roleError: null });
       }
     });
+
+    authSubscriptionCleanup = () => {
+      authListener.subscription.unsubscribe();
+    };
   },
 
   refreshRole: async () => {

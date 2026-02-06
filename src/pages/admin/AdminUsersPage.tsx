@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import type { Role } from "../../lib/roles";
+import { formatSupabaseError } from "../../lib/errors";
+import { Toast } from "../../components/ui/Toast";
 
 type ProfileRow = {
   user_id: string;
@@ -16,6 +18,7 @@ const roles: Role[] = ["courier", "manager", "engineer", "admin"];
 export function AdminUsersPage() {
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
     setErr(null);
@@ -25,13 +28,16 @@ export function AdminUsersPage() {
       .order("created_at", { ascending: false })
       .limit(300);
 
-    if (error) setErr(error.message);
+    if (error) setErr(formatSupabaseError(error));
     setRows((data ?? []) as any);
   }
 
   async function setRole(user_id: string, role: Role) {
     const { error } = await supabase.from("profiles").update({ role }).eq("user_id", user_id);
-    if (error) return alert(error.message);
+    if (error) {
+      setToast(formatSupabaseError(error));
+      return;
+    }
     await load();
   }
 
@@ -41,6 +47,8 @@ export function AdminUsersPage() {
 
   return (
     <div>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
       <div className="flex items-center justify-between gap-2">
         <div className="text-white/70">
           Роли пользователей (admin/manager/courier/engineer). Для работы нужен SQL-setup.

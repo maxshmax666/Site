@@ -4,6 +4,8 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { defaultMenuCategories } from "../../data/menuCategories";
+import { formatSupabaseError } from "../../lib/errors";
+import { Toast } from "../../components/ui/Toast";
 
 type MenuItem = {
   id: string;
@@ -103,11 +105,11 @@ function money(n: number) {
   return `${Math.round(n)} ₽`;
 }
 
-function getDbErrorMessage(error: { code?: string; message: string }) {
+function getDbErrorMessage(error: { code?: string; message?: string }) {
   if (error.code === "22P02") {
-    return `${MENU_CATEGORY_MIGRATION_ERROR}. ${error.message}`;
+    return `${MENU_CATEGORY_MIGRATION_ERROR}. ${formatSupabaseError(error)}`;
   }
-  return error.message;
+  return formatSupabaseError(error);
 }
 
 function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
@@ -143,6 +145,7 @@ export function AdminMenuPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const activeCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows]);
 
@@ -180,7 +183,7 @@ export function AdminMenuPage() {
 
   async function handleUpload() {
     if (!imageFile) {
-      alert("Выбери файл");
+      setUploadErr("Выбери файл");
       return;
     }
 
@@ -321,14 +324,20 @@ export function AdminMenuPage() {
 
   async function updateItem(id: string, patch: Partial<MenuItem>) {
     const { error } = await supabase.from("menu_items").update(patch).eq("id", id);
-    if (error) return alert(getDbErrorMessage(error));
+    if (error) {
+      setToast(getDbErrorMessage(error));
+      return;
+    }
     await load();
   }
 
   async function removeItem(id: string) {
     if (!confirm("Удалить позицию?")) return;
     const { error } = await supabase.from("menu_items").delete().eq("id", id);
-    if (error) return alert(getDbErrorMessage(error));
+    if (error) {
+      setToast(getDbErrorMessage(error));
+      return;
+    }
     if (editingId === id) {
       resetForm();
     }
@@ -341,6 +350,8 @@ export function AdminMenuPage() {
 
   return (
     <div>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-white/70">
           Редактор меню (таблица <code>menu_items</code>). Активных: <span className="text-white font-bold">{activeCount}</span> / {rows.length}
@@ -439,14 +450,20 @@ export function AdminMenuPage() {
                 const v = prompt("Новая цена ₽", String(r.price));
                 if (v === null) return;
                 const n = Number(v);
-                if (!Number.isFinite(n) || n <= 0) return alert("Неверная цена");
+                if (!Number.isFinite(n) || n <= 0) {
+                  setToast("Неверная цена");
+                  return;
+                }
                 void updateItem(r.id, { price: n });
               }}>Изменить цену</Button>
               <Button variant="soft" onClick={() => {
                 const v = prompt("Сортировка (меньше = выше)", String(r.sort));
                 if (v === null) return;
                 const n = Number(v);
-                if (!Number.isFinite(n)) return alert("Неверная сортировка");
+                if (!Number.isFinite(n)) {
+                  setToast("Неверная сортировка");
+                  return;
+                }
                 void updateItem(r.id, { sort: n });
               }}>Сортировка</Button>
               <Button variant="soft" onClick={() => {
