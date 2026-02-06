@@ -38,6 +38,7 @@ export function ProfilePage() {
 
   const currentTab = params.get("tab") === "orders" ? "orders" : "account";
   const { data: orders, loading, error, hasMore, loadMore, reload } = useMyOrders(user?.id);
+  const isSessionExpired = error?.status === 401;
 
   const totalOrders = useMemo(() => orders.length, [orders.length]);
 
@@ -94,10 +95,18 @@ export function ProfilePage() {
             {error && (
               <div className="mt-4 rounded-2xl border border-danger/30 bg-danger/15 p-4 text-sm text-white">
                 <div className="font-semibold">Ошибка загрузки заказов</div>
-                <div className="mt-1 text-white/80">{error}</div>
-                <Button className="mt-3" size="sm" variant="soft" onClick={() => void reload()}>
-                  Повторить
-                </Button>
+                <div className="mt-1 text-white/80">
+                  {isSessionExpired ? "Сессия истекла. Выполните вход снова." : error.message}
+                </div>
+                {isSessionExpired ? (
+                  <Button className="mt-3" size="sm" variant="soft" onClick={() => nav("/login", { replace: true })}>
+                    Перейти ко входу
+                  </Button>
+                ) : (
+                  <Button className="mt-3" size="sm" variant="soft" onClick={() => void reload()}>
+                    Повторить
+                  </Button>
+                )}
               </div>
             )}
 
