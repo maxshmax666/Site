@@ -15,6 +15,7 @@ export function LoginPage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const roleError = useAuthStore((s) => s.roleError);
   const syncSessionFromSupabase = useAuthStore((s) => s.syncSessionFromSupabase);
 
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -27,6 +28,7 @@ export function LoginPage() {
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const oauthFallbackTimerRef = useRef<number | null>(null);
 
   const clearOAuthFallbackTimer = () => {
@@ -71,20 +73,35 @@ export function LoginPage() {
     setIsAuthLoading(true);
     setError(null);
     setOk(null);
+    setSyncError(null);
     try {
       if (!hasSupabaseEnv || !supabase) {
         throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
       }
-      if (!email || !password) throw new Error("Введите email и пароль.");
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail || !password) throw new Error("Введите email и пароль.");
       if (password.length < 6) throw new Error("Пароль минимум 6 символов.");
 
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        await syncSessionFromSupabase();
+        const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (error) {
+          throw error;
+        }
+
+        if (data.session) {
+          try {
+            await syncSessionFromSupabase();
+          } catch (sessionSyncError) {
+            setSyncError(prettifyError(sessionSyncError));
+          }
+          nav("/profile", { replace: true });
+          return;
+        }
+
+        setError("Вход выполнен не полностью: сессия не создана. Проверьте подтверждение email и попробуйте снова.");
       } else {
         // Важно: если включено подтверждение email, пользователь увидит сообщение
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password });
         if (error) throw error;
 
         // Если email confirmation включён — сессии может не быть сразу
@@ -140,10 +157,11 @@ export function LoginPage() {
       if (!hasSupabaseEnv || !supabase) {
         throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
       }
-      if (!email) {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) {
         throw new Error("Введите email для восстановления пароля.");
       }
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
@@ -179,6 +197,7 @@ export function LoginPage() {
               setMode((m) => (m === "login" ? "signup" : "login"));
               setError(null);
               setOk(null);
+              setSyncError(null);
             }}
             type="button"
           >
@@ -224,6 +243,11 @@ export function LoginPage() {
         {ok && (
           <div className="mt-4 p-3 rounded-2xl bg-green/15 border border-green/30 text-sm text-white">
             {ok}
+          </div>
+        )}
+        {(syncError || roleError) && (
+          <div className="mt-4 p-3 rounded-2xl bg-warning/15 border border-warning/30 text-sm text-white">
+            {syncError ?? roleError}
           </div>
         )}
 
