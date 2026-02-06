@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
+import { normalizeSupabaseError, type AppError } from "@/lib/errors";
 
 type DbMenuItem = {
   id: string;
@@ -16,11 +17,10 @@ type DbMenuItem = {
 type UseMenuItemsResult = {
   items: MenuItem[];
   loading: boolean;
-  error: string | null;
+  error: AppError | null;
   reload: () => Promise<void>;
   hasSupabaseEnv: boolean;
 };
-
 
 function mapDbItem(item: DbMenuItem): MenuItem {
   return {
@@ -37,7 +37,7 @@ function mapDbItem(item: DbMenuItem): MenuItem {
 export function useMenuItems(): UseMenuItemsResult {
   const [items, setItems] = useState<MenuItem[]>(fallbackMenu);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
 
   const load = useCallback(async () => {
     if (!hasSupabaseEnv || !supabase) {
@@ -60,7 +60,19 @@ export function useMenuItems(): UseMenuItemsResult {
       .limit(500);
 
     if (supaError) {
-      setError(supaError.message);
+      if (import.meta.env.DEV) {
+        console.error("[menu_items] Supabase error", supaError);
+      } else {
+        console.error("MENU_LOAD_FAILED");
+      }
+
+      setError(
+        normalizeSupabaseError(
+          "MENU_LOAD_FAILED",
+          "Не удалось загрузить меню из базы данных. Показаны демо-данные.",
+          supaError,
+        ),
+      );
       setItems(fallbackMenu);
       setLoading(false);
       return;

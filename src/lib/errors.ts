@@ -5,6 +5,12 @@ type DbErrorLike = {
   hint?: string;
 };
 
+export type AppError = {
+  code: string;
+  message: string;
+  hint?: string;
+};
+
 const DEFAULT_SUPABASE_ERROR = "Не удалось выполнить запрос. Попробуйте ещё раз.";
 
 export function formatSupabaseError(error: DbErrorLike | null | undefined, fallback = DEFAULT_SUPABASE_ERROR) {
@@ -25,3 +31,38 @@ export function formatSupabaseError(error: DbErrorLike | null | undefined, fallb
   return fallback;
 }
 
+function detectTechnicalSuffix(error: DbErrorLike | null | undefined) {
+  if (!error) return "UNKNOWN";
+
+  if (error.code === "42501") {
+    return "RLS";
+  }
+
+  if (error.code === "PGRST301") {
+    return "UNAUTHORIZED";
+  }
+
+  if (error.code?.trim()) {
+    return error.code.trim().toUpperCase();
+  }
+
+  if (error.message?.toLowerCase().includes("row-level security")) {
+    return "RLS";
+  }
+
+  return "UNKNOWN";
+}
+
+export function normalizeSupabaseError(
+  baseCode: string,
+  userMessage: string,
+  error?: DbErrorLike | null,
+): AppError {
+  const technical = detectTechnicalSuffix(error);
+
+  return {
+    code: `${baseCode}:${technical}`,
+    message: userMessage,
+    hint: error?.hint?.trim() || undefined,
+  };
+}
