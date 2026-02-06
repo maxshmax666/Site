@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
-import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 
 type DbMenuItem = {
   id: string;
   title: string;
   description: string | null;
-  category: MenuCategory;
+  category: string;
   price: number;
   image_url: string | null;
   is_active: boolean;
@@ -26,10 +25,9 @@ const hasSupabaseEnv =
   Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 function mapDbItem(item: DbMenuItem): MenuItem {
-  const category: MenuCategory = isMenuCategory(item.category) ? item.category : "classic";
   return {
     id: item.id,
-    category,
+    category: item.category,
     title: item.title,
     desc: item.description ?? "",
     priceFrom: Number(item.price ?? 0),
