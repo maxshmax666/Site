@@ -15,8 +15,34 @@ npm run preview
 ## Cloudflare Pages (SPA)
 - Build command: `npm run build`
 - Output directory: `dist`
+- Functions directory: `functions` (Cloudflare Pages Functions enabled автоматически, если директория существует в репозитории)
 - Для SPA-роутинга используется `_routes.json` (а не `_redirects`).
   `_redirects` на Pages конфликтует с HTML-нормализацией (strip `.html`/`/index`) и может приводить к loop, поэтому применяем нативный механизм маршрутизации.
+
+### API на Pages Functions
+
+В репозитории добавлены endpoint'ы:
+
+- `GET /api/health` → `{ "ok": true }`
+- `GET /api/menu` → JSON-меню (`categories` + `items`)
+- `GET /api/auth/me` → профиль текущего пользователя по `Authorization: Bearer <jwt>` или `401`
+
+Все endpoint'ы явно отвечают `content-type: application/json; charset=utf-8`.
+
+Для `GET /api/auth/me` в Cloudflare Pages нужно задать env vars:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+Проверка после деплоя:
+
+```bash
+curl -i https://tagil.pizza/api/health
+curl -i https://tagil.pizza/api/menu
+curl -i https://tagil.pizza/api/auth/me
+```
+
+Ожидаемо: JSON-ответы (без `<!doctype html>` в body).
 
 Пример `public/_routes.json`:
 ```json
