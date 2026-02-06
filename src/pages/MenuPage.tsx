@@ -4,7 +4,7 @@ import { useMenuCategories } from "../shared/hooks/useMenuCategories";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
 
 export function MenuPage() {
-  const { categories } = useMenuCategories();
+  const { categories, error: categoriesError } = useMenuCategories();
   const { items, loading, error, hasSupabaseEnv } = useMenuItems();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -76,7 +76,15 @@ export function MenuPage() {
 
       {error && (
         <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
-          Не удалось загрузить меню из базы данных. Показаны демо-данные.
+          <div>{error.message}</div>
+          <div className="mt-1 text-xs text-white/70">Код: {error.code}</div>
+        </div>
+      )}
+
+      {categoriesError && (
+        <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
+          <div>{categoriesError.message}</div>
+          <div className="mt-1 text-xs text-white/70">Код: {categoriesError.code}</div>
         </div>
       )}
 
