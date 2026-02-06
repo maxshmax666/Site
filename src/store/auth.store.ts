@@ -18,9 +18,6 @@ type AuthState = {
 };
 
 function formatRoleError(error: { code?: string; message?: string }) {
-  if (error.code === "PGRST116") {
-    return "Нет строки в profiles для текущего пользователя. Запустите backfill/триггер из supabase_admin.sql.";
-  }
   return error.message ?? "Не удалось прочитать роль из profiles.";
 }
 
@@ -39,11 +36,19 @@ async function fetchRole(): Promise<{ role: Role; error: string | null }> {
     .from("profiles")
     .select("role")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return { role: "guest", error: formatRoleError(error) };
   }
+  if (!data) {
+    console.debug(
+      "profiles row is missing for authenticated user, using guest role. Run backfill/trigger from supabase_admin.sql.",
+      { userId },
+    );
+    return { role: "guest", error: null };
+  }
+
   return { role: (data?.role as Role) ?? "guest", error: null };
 }
 
