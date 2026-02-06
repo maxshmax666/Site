@@ -54,3 +54,24 @@ curl -i -fsS "https://<your-domain>/api/auth/me"
 ## Why так
 - Разделение Variables для `Production`/`Preview` снижает риск утечки прод-ключей в preview окружение.
 - Явный `MISCONFIGURED_ENV` ускоряет диагностику инцидентов: видно, что проблема в конфиге, а не в бизнес-логике endpoint'а.
+
+## Build/Deploy stability guardrails
+
+`wrangler.toml` для Cloudflare Pages **не обязателен**.
+
+Для этого проекта достаточно настроек в Pages UI:
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: корень репозитория
+- Functions directory: `functions`
+
+Если деплой падает с `Failed to publish assets` при успешной сборке:
+
+1. Перезапустите деплой (часто это transient-side issue на стороне Pages).
+2. Перепроверьте четыре параметра выше в Settings → Builds & deployments.
+3. Сверьте логи: build должен завершаться успешно (`vite build` + артефакты в `dist`).
+4. Если ошибка повторяется — приложите deployment ID в тикет Cloudflare Support.
+
+Когда стоит добавлять `wrangler.toml`:
+- если хотите хранить часть Pages-конфига в репозитории (IaC-подход),
+- или использовать локальные wrangler-сценарии/валидацию.
