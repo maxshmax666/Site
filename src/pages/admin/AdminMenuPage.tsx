@@ -3,14 +3,14 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { defaultMenuCategories, isMenuCategory, type MenuCategory } from "../../data/menuCategories";
+import { defaultMenuCategories } from "../../data/menuCategories";
 
 type MenuItem = {
   id: string;
   created_at: string;
   title: string;
   description: string | null;
-  category: MenuCategory;
+  category: string;
   hasLegacyCategory: boolean;
   price: number;
   image_url: string | null;
@@ -19,14 +19,14 @@ type MenuItem = {
 };
 
 type CategoryOption = {
-  key: MenuCategory;
+  key: string;
   label: string;
 };
 
 type FormState = {
   title: string;
   description: string;
-  category: MenuCategory | "";
+  category: string;
   price: string;
   imageUrl: string;
   sort: string;
@@ -75,9 +75,9 @@ function toNumber(value: unknown, field: string) {
 }
 
 function mapDbItem(raw: Record<string, unknown>): MenuItem {
-  const rawCategory = String(raw.category ?? "");
-  const hasLegacyCategory = !isMenuCategory(rawCategory);
-  const category: MenuCategory = hasLegacyCategory ? "classic" : rawCategory;
+  const rawCategory = String(raw.category ?? "").trim();
+  const hasLegacyCategory = !rawCategory;
+  const category = rawCategory || "classic";
 
   const isActiveValue = raw.is_active;
   if (typeof isActiveValue !== "boolean") {
@@ -116,7 +116,7 @@ function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
     .map((row) => {
       const key = String(row.key ?? "");
       const label = String(row.label ?? "").trim();
-      if (!isMenuCategory(key) || !label) {
+      if (!key || !label) {
         return null;
       }
       return { key, label } satisfies CategoryOption;
@@ -251,7 +251,7 @@ export function AdminMenuPage() {
     if (!current.title.trim()) {
       return "Введите название";
     }
-    if (!current.category || !isMenuCategory(current.category)) {
+    if (!current.category) {
       return "Выберите категорию";
     }
     const priceValue = Number(current.price);
@@ -275,7 +275,7 @@ export function AdminMenuPage() {
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      category: form.category as MenuCategory,
+      category: form.category,
       price: Number(form.price),
       image_url: form.imageUrl.trim() || null,
       is_active: form.isActive,
@@ -377,7 +377,7 @@ export function AdminMenuPage() {
               <select
                 className="mt-1 w-full px-3 py-2 rounded-xl bg-black/30 border border-white/10 text-white"
                 value={form.category}
-                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as MenuCategory }))}
+                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
                 required
               >
                 <option value="">Выберите категорию</option>

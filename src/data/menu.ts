@@ -2,7 +2,7 @@ import { defaultMenuCategories, menuCategoryList, type MenuCategory } from "./me
 
 export type MenuItem = {
   id: string;
-  category: MenuCategory;
+  category: string;
   title: string;
   desc: string;
   priceFrom: number;
