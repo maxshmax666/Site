@@ -15,7 +15,7 @@ export function LoginPage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
-  const refreshRole = useAuthStore((s) => s.refreshRole);
+  const syncSessionFromSupabase = useAuthStore((s) => s.syncSessionFromSupabase);
 
   const [mode, setMode] = useState<"login" | "signup">("login");
   const title = useMemo(() => (mode === "login" ? "Вход" : "Регистрация"), [mode]);
@@ -43,6 +43,12 @@ export function LoginPage() {
   }, []);
 
 
+  useEffect(() => {
+    if (!loading && user) {
+      nav("/profile");
+    }
+  }, [loading, nav, user]);
+
   if (!loading && user) {
     // уже залогинен
     return (
@@ -60,6 +66,8 @@ export function LoginPage() {
   }
 
   const onSubmit = async () => {
+    if (isAuthLoading) return;
+
     setIsAuthLoading(true);
     setError(null);
     setOk(null);
@@ -73,8 +81,7 @@ export function LoginPage() {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        await refreshRole();
-        nav("/profile");
+        await syncSessionFromSupabase();
       } else {
         // Важно: если включено подтверждение email, пользователь увидит сообщение
         const { data, error } = await supabase.auth.signUp({ email, password });
@@ -82,8 +89,7 @@ export function LoginPage() {
 
         // Если email confirmation включён — сессии может не быть сразу
         if (data.session) {
-          await refreshRole();
-          nav("/profile");
+          await syncSessionFromSupabase();
         } else {
           setOk("Проверь почту: мы отправили письмо для подтверждения (если включено в настройках).");
         }
@@ -193,7 +199,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button disabled={isAuthLoading} type="submit">
+          <Button disabled={isAuthLoading || isOAuthLoading} type="submit">
             {mode === "login" ? "Войти" : "Зарегистрироваться"}
           </Button>
         </form>
@@ -222,7 +228,7 @@ export function LoginPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button disabled={isOAuthLoading} variant="soft" onClick={onGoogle}>
+          <Button disabled={isOAuthLoading || isAuthLoading} variant="soft" onClick={onGoogle}>
             {isOAuthLoading ? "Переходим в Google..." : "Войти через Google"}
           </Button>
 
