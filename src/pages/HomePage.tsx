@@ -7,6 +7,7 @@ import { Badge } from "../components/ui/Badge";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
+import { MenuCatalogSection } from "../components/sections/MenuCatalogSection";
 
 const faqs = [
   { q: "Как быстро привозите?", a: "Обычно 30–60 минут по городу (зависит от загрузки и района)." },
@@ -24,8 +25,12 @@ export function HomePage() {
   }, [items]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      <Hero />
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+      <MenuCatalogSection className="scroll-mt-24" />
+
+      <section className="mt-10">
+        <Hero />
+      </section>
 
       <section className="mt-10 grid md:grid-cols-2 gap-4">
         {promos.map((p) => (
