@@ -6,6 +6,8 @@ import type { OrderStatus } from "./admin.types";
 import { statusLabel } from "./admin.types";
 import { useAuthStore } from "../../store/auth.store";
 import { hasRole } from "../../lib/roles";
+import { formatSupabaseError } from "../../lib/errors";
+import { Toast } from "../../components/ui/Toast";
 
 type OrderRow = {
   id: string;
@@ -28,6 +30,7 @@ export function AdminCouriersPage() {
   const [err, setErr] = useState<string | null>(null);
   const [couriers, setCouriers] = useState<CourierProfile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const { role, user } = useAuthStore();
 
   const courierById = useMemo(() => {
@@ -56,7 +59,7 @@ export function AdminCouriersPage() {
 
     const { data, error } = await query;
 
-    if (error) setErr(error.message);
+    if (error) setErr(formatSupabaseError(error));
     setRows((data ?? []) as any);
     setLoading(false);
   }, [role, user?.id]);
@@ -75,7 +78,7 @@ export function AdminCouriersPage() {
       .limit(300);
 
     if (error) {
-      setErr(error.message);
+      setErr(formatSupabaseError(error));
       setCouriers([]);
       return;
     }
@@ -85,13 +88,19 @@ export function AdminCouriersPage() {
 
   async function setStatus(id: string, status: OrderStatus) {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) return alert(error.message);
+    if (error) {
+      setToast(formatSupabaseError(error));
+      return;
+    }
     await loadOrders();
   }
 
   async function setCourier(id: string, courierId: string | null) {
     const { error } = await supabase.from("orders").update({ courier_id: courierId }).eq("id", id);
-    if (error) return alert(error.message);
+    if (error) {
+      setToast(formatSupabaseError(error));
+      return;
+    }
     await loadOrders();
   }
 
@@ -101,6 +110,8 @@ export function AdminCouriersPage() {
 
   return (
     <div>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
       <div className="flex items-center justify-between gap-2">
         <div className="text-white/70">Экран курьеров: READY → COURIER → DELIVERED</div>
         <Button variant="soft" onClick={() => void Promise.all([loadOrders(), loadCouriers()])}>Обновить</Button>

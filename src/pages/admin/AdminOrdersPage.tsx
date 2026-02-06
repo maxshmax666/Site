@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { OrderStatus, statusLabel, statusFlow } from "./admin.types";
+import { formatSupabaseError } from "../../lib/errors";
+import { Toast } from "../../components/ui/Toast";
 
 type OrderRow = {
   id: string;
@@ -24,6 +26,7 @@ export function AdminOrdersPage() {
   const [rows, setRows] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const totals = useMemo(() => {
     const by: Record<string, number> = {};
@@ -41,7 +44,7 @@ export function AdminOrdersPage() {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (error) setErr(error.message);
+    if (error) setErr(formatSupabaseError(error));
     setRows((data ?? []) as any);
     setLoading(false);
   }
@@ -49,7 +52,7 @@ export function AdminOrdersPage() {
   async function setStatus(id: string, status: OrderStatus) {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
     if (error) {
-      alert(error.message);
+      setToast(formatSupabaseError(error));
       return;
     }
     await load();
@@ -61,6 +64,8 @@ export function AdminOrdersPage() {
 
   return (
     <div>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap gap-2 text-sm">
           {(["NEW", "COOKING", "READY", "COURIER", "DELIVERED", "CANCELLED"] as OrderStatus[]).map((s) => (

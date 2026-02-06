@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { Badge } from "../../components/ui/Badge";
 import type { OrderStatus } from "./admin.types";
 import { statusLabel } from "./admin.types";
+import { formatSupabaseError } from "../../lib/errors";
+import { Toast } from "../../components/ui/Toast";
 
 type OrderRow = {
   id: string;
@@ -15,6 +17,7 @@ type OrderRow = {
 export function AdminKitchenPage() {
   const [rows, setRows] = useState<OrderRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
     setErr(null);
@@ -25,7 +28,11 @@ export function AdminKitchenPage() {
       .order("created_at", { ascending: true })
       .limit(200);
 
-    if (error) setErr(error.message);
+    if (error) {
+      const message = formatSupabaseError(error);
+      setErr(message);
+      setToast(message);
+    }
     setRows((data ?? []) as any);
   }
 
@@ -43,6 +50,8 @@ export function AdminKitchenPage() {
 
   return (
     <div>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
       <div className="text-white/70">Экран кухни: NEW / COOKING / READY. Автообновление каждые 5 секунд.</div>
       {err && (
         <div className="mt-4 p-3 rounded-2xl bg-danger/15 border border-danger/30 text-sm text-white">
