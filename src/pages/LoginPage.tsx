@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { supabase } from "../lib/supabase";
+import { hasSupabaseEnv, supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/auth.store";
 
 function prettifyError(e: unknown) {
@@ -42,9 +42,6 @@ export function LoginPage() {
     };
   }, []);
 
-  const hasSupabaseEnv = Boolean(
-    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
-  );
 
   if (!loading && user) {
     // уже залогинен
@@ -67,7 +64,7 @@ export function LoginPage() {
     setError(null);
     setOk(null);
     try {
-      if (!hasSupabaseEnv) {
+      if (!hasSupabaseEnv || !supabase) {
         throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
       }
       if (!email || !password) throw new Error("Введите email и пароль.");
@@ -106,7 +103,7 @@ export function LoginPage() {
     setError(null);
     setOk(null);
     try {
-      if (!hasSupabaseEnv) {
+      if (!hasSupabaseEnv || !supabase) {
         throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
       }
       const { error } = await supabase.auth.signInWithOAuth({
@@ -134,7 +131,7 @@ export function LoginPage() {
     setError(null);
     setOk(null);
     try {
-      if (!hasSupabaseEnv) {
+      if (!hasSupabaseEnv || !supabase) {
         throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
       }
       if (!email) {

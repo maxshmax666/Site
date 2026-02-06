@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { categories as fallbackCategories } from "../../data/menu";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 export type MenuCategoryItem = {
   key: MenuCategory;
@@ -21,8 +21,6 @@ type DbCategory = {
   sort: number;
 };
 
-const hasSupabaseEnv =
-  Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export function useMenuCategories() {
   const [categories, setCategories] = useState<MenuCategoryItem[]>(
@@ -30,7 +28,7 @@ export function useMenuCategories() {
   );
 
   const load = useCallback(async () => {
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv || !supabase) {
       return;
     }
 

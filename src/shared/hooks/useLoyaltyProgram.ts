@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 export type LoyaltyTransaction = {
   id: string;
@@ -59,6 +59,13 @@ export function useLoyaltyProgram(userId?: string): UseLoyaltyProgramResult {
       setData(null);
       setLoading(false);
       setError("Войдите в аккаунт, чтобы увидеть баланс и историю бонусов.");
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setData(null);
+      setLoading(false);
+      setError("Supabase не настроен. Бонусная программа недоступна в демо-режиме.");
       return;
     }
 

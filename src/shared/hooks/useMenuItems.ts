@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
 
 type DbMenuItem = {
@@ -21,8 +21,6 @@ type UseMenuItemsResult = {
   hasSupabaseEnv: boolean;
 };
 
-const hasSupabaseEnv =
-  Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 function mapDbItem(item: DbMenuItem): MenuItem {
   return {
@@ -42,7 +40,7 @@ export function useMenuItems(): UseMenuItemsResult {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv || !supabase) {
       setLoading(false);
       setError(null);
       setItems(fallbackMenu);
