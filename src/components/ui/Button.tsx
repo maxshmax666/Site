@@ -8,6 +8,7 @@ export function Button({
   className,
   variant = "primary",
   size = "md",
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
   const base =
@@ -25,5 +26,5 @@ export function Button({
 
   const s = size === "sm" ? "px-3 py-2 text-sm" : size === "lg" ? "px-5 py-3 text-base" : "px-4 py-2.5 text-sm";
 
-  return <button className={cn(base, v, s, className)} {...props} />;
+  return <button type={type} className={cn(base, v, s, className)} {...props} />;
 }
