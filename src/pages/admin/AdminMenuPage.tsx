@@ -37,6 +37,9 @@ type FormState = {
 
 const MAX_ERROR_DETAILS = 5;
 const MENU_CATEGORY_MIGRATION_ERROR = "Схема БД не мигрирована: menu_category";
+const LEGACY_CATEGORY_FALLBACKS: Record<string, string> = {
+  classic: "pizza",
+};
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -110,6 +113,17 @@ function getDbErrorMessage(error: { code?: string; message?: string }) {
     return `${MENU_CATEGORY_MIGRATION_ERROR}. ${formatSupabaseError(error)}`;
   }
   return formatSupabaseError(error);
+}
+
+function isCategoryEnumError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error || error.code !== "22P02" || !error.message) {
+    return false;
+  }
+  return error.message.includes("menu_category");
+}
+
+function resolveLegacyCategory(category: string) {
+  return LEGACY_CATEGORY_FALLBACKS[category] ?? null;
 }
 
 function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
@@ -290,18 +304,24 @@ export function AdminMenuPage() {
       return;
     }
 
-    if (editingId) {
-      const { error } = await supabase.from("menu_items").update(payload).eq("id", editingId);
-      if (error) {
-        setFormError(getDbErrorMessage(error));
-        return;
+    const executeSave = async (nextPayload: typeof payload) => {
+      if (editingId) {
+        return supabase.from("menu_items").update(nextPayload).eq("id", editingId);
       }
-    } else {
-      const { error } = await supabase.from("menu_items").insert(payload);
-      if (error) {
-        setFormError(getDbErrorMessage(error));
-        return;
+      return supabase.from("menu_items").insert(nextPayload);
+    };
+
+    let { error } = await executeSave(payload);
+    if (error && isCategoryEnumError(error)) {
+      const legacyCategory = resolveLegacyCategory(payload.category);
+      if (legacyCategory && legacyCategory !== payload.category) {
+        ({ error } = await executeSave({ ...payload, category: legacyCategory }));
       }
+    }
+
+    if (error) {
+      setFormError(getDbErrorMessage(error));
+      return;
     }
 
     resetForm();
