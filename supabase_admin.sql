@@ -117,20 +117,8 @@ where not exists (
   where p.user_id = u.id
 );
 
--- 6.2) назначение роли конкретному пользователю (email/uuid)
--- по email (создаст строку в profiles, если её нет)
-insert into public.profiles(user_id, email, role)
-select u.id, u.email, 'admin'::app_role
-from auth.users u
-where u.email = 'admin@example.com'
-on conflict (user_id) do update
-set role = excluded.role,
-    email = excluded.email;
-
--- по uuid (предполагается, что пользователь уже существует в auth.users)
-update public.profiles
-set role = 'admin'::app_role
-where user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+-- 6.2) назначение admin делается вручную отдельным runbook-файлом:
+--      см. supabase_admin_role_grants.sql
 
 -- 7) RLS
 alter table public.profiles enable row level security;
