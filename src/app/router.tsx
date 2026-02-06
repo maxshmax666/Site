@@ -6,6 +6,7 @@ import { MenuCategoryPage } from "../pages/MenuCategoryPage";
 import { PizzaPage } from "../pages/PizzaPage";
 import { CartPage } from "../pages/CartPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
+import { OrderSuccessPage } from "../pages/OrderSuccessPage";
 import { LoginPage } from "../pages/LoginPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { ProfilePage } from "../pages/ProfilePage";
@@ -33,7 +34,22 @@ export const router = createBrowserRouter([
       { path: "menu/:category", element: <MenuCategoryPage /> },
       { path: "pizza/:id", element: <PizzaPage /> },
       { path: "cart", element: <CartPage /> },
-      { path: "checkout", element: <CheckoutPage /> },
+      {
+        path: "checkout",
+        element: (
+          <AuthGate>
+            <CheckoutPage />
+          </AuthGate>
+        ),
+      },
+      {
+        path: "order/success/:id",
+        element: (
+          <AuthGate>
+            <OrderSuccessPage />
+          </AuthGate>
+        ),
+      },
       { path: "login", element: <LoginPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
       {

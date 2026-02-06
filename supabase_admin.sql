@@ -161,6 +161,7 @@ drop policy if exists "orders_insert_own" on public.orders;
 create policy "orders_insert_own"
 on public.orders
 for insert
+to authenticated
 with check (created_by = auth.uid());
 
 -- customers can read their own orders
@@ -212,6 +213,7 @@ drop policy if exists "order_items_insert_via_order" on public.order_items;
 create policy "order_items_insert_via_order"
 on public.order_items
 for insert
+to authenticated
 with check (
   exists (
     select 1 from public.orders o
