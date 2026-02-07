@@ -40,9 +40,13 @@ export function useMenuItems(): UseMenuItemsResult {
           message: requestError.message,
         });
 
+        const isConfigurationError = requestError.code === "HTTP_ERROR" && (requestError.status === 500 || requestError.status === 503);
+
         setError({
           code: diagnosticCode,
-          message: "Ошибка загрузки с сервера. Меню временно недоступно.",
+          message: isConfigurationError
+            ? "Сервис меню временно недоступен: ошибка конфигурации сервера."
+            : "Ошибка загрузки с сервера. Меню временно недоступно.",
         });
       } else {
         console.error("MENU_LOAD_FAILED", requestError);

@@ -63,9 +63,14 @@ export function useMenuCategories(): UseMenuCategoriesResult {
           status: requestError.status,
           message: requestError.message,
         });
+
+        const isConfigurationError = requestError.code === "HTTP_ERROR" && (requestError.status === 500 || requestError.status === 503);
+
         setError({
           code: diagnosticCode,
-          message: "Ошибка загрузки с сервера. Категории временно недоступны.",
+          message: isConfigurationError
+            ? "Сервис категорий временно недоступен: ошибка конфигурации сервера."
+            : "Ошибка загрузки с сервера. Категории временно недоступны.",
         });
       } else {
         console.error("MENU_CATEGORIES_LOAD_FAILED", requestError);

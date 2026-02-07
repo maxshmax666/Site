@@ -58,12 +58,16 @@ describe("GET /api/menu", () => {
     expect(json.categories).toHaveLength(1);
   });
 
-  it("returns empty payload for misconfigured environment", async () => {
+  it("returns 500 with diagnostics when env is misconfigured", async () => {
     const response = await onRequestGet({ env: {} } as unknown as Parameters<typeof onRequestGet>[0]);
 
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual({ categories: [], items: [] });
+    expect(response.status).toBeGreaterThanOrEqual(500);
+    expect(response.status).toBeLessThan(600);
+
+    const payload = await response.json();
+    expect(payload.code).toBe("MISCONFIGURED_ENV");
+    expect(payload.error).toBe("Required runtime environment variables are missing");
+    expect(payload.missing).toEqual(expect.arrayContaining(["SUPABASE_URL|API_ORIGIN", "SUPABASE_ANON_KEY"]));
     expect(createClientMock).not.toHaveBeenCalled();
   });
 });

@@ -70,23 +70,21 @@ function deriveCategoriesFromItems(items: MenuItem[]): MenuCategoryApiItem[] {
 export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
   const envError = ensureRequiredApiEnv(env);
   if (envError) {
-    return json(
-      {
-        categories: [],
-        items: [],
-      },
-      { status: 200 },
-    );
+    return envError;
   }
 
   const supabaseOrigin = resolveSupabaseOrigin(env);
   if (!supabaseOrigin || !env.SUPABASE_ANON_KEY) {
     return json(
       {
-        categories: [],
-        items: [],
+        code: "MISCONFIGURED_ENV",
+        error: "Required runtime environment variables are missing",
+        missing: [
+          ...(!supabaseOrigin ? ["SUPABASE_URL|API_ORIGIN"] : []),
+          ...(!env.SUPABASE_ANON_KEY ? ["SUPABASE_ANON_KEY"] : []),
+        ],
       },
-      { status: 200 },
+      { status: 500 },
     );
   }
 
