@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { type MenuItem } from "../../data/menu";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
-import { hasSupabaseEnv } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 type UseMenuItemsResult = {
   items: MenuItem[];
@@ -31,6 +31,30 @@ export function useMenuItems(): UseMenuItemsResult {
       const payload = await fetchJson<MenuApiResponse>(MENU_API_URL, { timeoutMs: 8_000 });
       setItems(Array.isArray(payload.items) ? payload.items : []);
     } catch (requestError) {
+      if (supabase) {
+        const { data, error: dbError } = await supabase
+          .from("menu_items")
+          .select("id,title,description,category,price,image_url")
+          .eq("is_active", true)
+          .order("category", { ascending: true })
+          .order("sort", { ascending: true })
+          .order("created_at", { ascending: false });
+
+        if (!dbError) {
+          const fallbackItems = (Array.isArray(data) ? data : []).map((row) => ({
+            id: String(row.id ?? ""),
+            title: String(row.title ?? ""),
+            desc: String(row.description ?? ""),
+            category: String(row.category ?? ""),
+            priceFrom: Number(row.price ?? 0),
+            image: typeof row.image_url === "string" ? row.image_url : undefined,
+          })) satisfies MenuItem[];
+
+          setItems(fallbackItems.filter((item) => item.id && item.title && Number.isFinite(item.priceFrom)));
+          return;
+        }
+      }
+
       if (isApiClientError(requestError)) {
         const diagnosticCode = `MENU_LOAD_FAILED:${requestError.code}`;
         console.error("MENU_LOAD_FAILED", {

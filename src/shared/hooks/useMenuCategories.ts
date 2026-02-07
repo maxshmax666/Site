@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase";
 
 export type MenuCategoryItem = {
   key: MenuCategory;
@@ -55,6 +56,41 @@ export function useMenuCategories(): UseMenuCategoriesResult {
 
       setCategories(next);
     } catch (requestError) {
+      if (supabase) {
+        const { data, error: dbError } = await supabase
+          .from("menu_categories")
+          .select("key,label,full_label,image_url,fallback_background,sort")
+          .eq("is_active", true)
+          .order("sort", { ascending: true });
+
+        if (!dbError) {
+          const fallbackCategories = (Array.isArray(data) ? data : [])
+            .map((category) => ({
+              key: String(category.key ?? ""),
+              label: String(category.label ?? "").trim(),
+              fullLabel: String(category.full_label ?? "").trim(),
+              imageUrl: typeof category.image_url === "string" ? category.image_url : undefined,
+              background:
+                typeof category.fallback_background === "string"
+                  ? category.fallback_background
+                  : "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
+              sort: Number(category.sort ?? 100),
+            }))
+            .filter((category) => isMenuCategory(category.key) && category.label)
+            .map((category) => ({
+              key: category.key as MenuCategory,
+              label: category.label,
+              fullLabel: category.fullLabel || category.label,
+              imageUrl: category.imageUrl,
+              background: category.background,
+              sort: Number.isFinite(category.sort) ? category.sort : 100,
+            }));
+
+          setCategories(fallbackCategories);
+          return;
+        }
+      }
+
       if (isApiClientError(requestError)) {
         const diagnosticCode = `MENU_CATEGORIES_LOAD_FAILED:${requestError.code}`;
         console.error("MENU_CATEGORIES_LOAD_FAILED", {
