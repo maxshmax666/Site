@@ -1,0 +1,19 @@
+{
+  "categories": [
+    {
+      "key": "pizza",
+      "label": "Пицца",
+      "fullLabel": "Пицца",
+      "background": "linear-gradient(135deg, #334155 0%, #0f172a 100%)"
+    }
+  ],
+  "items": [
+    {
+      "id": "pizza-e2e-1",
+      "category": "pizza",
+      "title": "Тестовая пицца",
+      "desc": "E2E fixture",
+      "priceFrom": 555
+    }
+  ]
+}
