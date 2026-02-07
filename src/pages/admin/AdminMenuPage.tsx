@@ -37,6 +37,7 @@ type FormState = {
 
 const MAX_ERROR_DETAILS = 5;
 const MENU_CATEGORY_MIGRATION_ERROR = "Схема БД не мигрирована: menu_category";
+const MENU_CATEGORIES_SCHEMA_MISMATCH_ERROR = "Не удалось загрузить категории: схема БД устарела. Примените миграцию menu_categories (full_label, image_url, fallback_background, sort, is_active).";
 const LEGACY_CATEGORY_FALLBACKS: Record<string, string> = {
   classic: "pizza",
 };
@@ -164,7 +165,15 @@ export function AdminMenuPage() {
   const activeCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows]);
 
   async function loadCategories() {
-    const { data } = await supabase.from("menu_categories").select("key,label").order("sort", { ascending: true });
+    const { data, error } = await supabase.from("menu_categories").select("key,label").order("sort", { ascending: true });
+
+    if (error) {
+      setCategories(defaultMenuCategories.map((category) => ({ key: category.value, label: category.fullLabel })));
+      const schemaHint = error.code === "42703" || error.code === "42P01";
+      setToast(schemaHint ? MENU_CATEGORIES_SCHEMA_MISMATCH_ERROR : getDbErrorMessage(error));
+      return;
+    }
+
     setCategories(mapCategoryRows(Array.isArray(data) ? data : []));
   }
 

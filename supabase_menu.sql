@@ -180,6 +180,32 @@ create table if not exists public.menu_categories (
   created_at timestamptz not null default now()
 );
 
+-- Backward-compatible columns for old installations
+alter table if exists public.menu_categories
+  add column if not exists full_label text,
+  add column if not exists image_url text,
+  add column if not exists fallback_background text,
+  add column if not exists sort int,
+  add column if not exists is_active boolean;
+
+alter table if exists public.menu_categories
+  alter column full_label set default '',
+  alter column fallback_background set default 'linear-gradient(135deg, #334155 0%, #0f172a 100%)',
+  alter column sort set default 100,
+  alter column is_active set default true;
+
+update public.menu_categories
+set full_label = coalesce(nullif(trim(full_label), ''), label),
+    fallback_background = coalesce(nullif(trim(fallback_background), ''), 'linear-gradient(135deg, #334155 0%, #0f172a 100%)'),
+    sort = coalesce(sort, 100),
+    is_active = coalesce(is_active, true);
+
+alter table if exists public.menu_categories
+  alter column full_label set not null,
+  alter column fallback_background set not null,
+  alter column sort set not null,
+  alter column is_active set not null;
+
 insert into public.menu_categories(key, label, full_label, image_url, fallback_background, sort, is_active)
 values
   ('classic','Классические','Классические пиццы','https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1600&q=80','linear-gradient(135deg, #c2410c 0%, #7c2d12 100%)',10,true),
