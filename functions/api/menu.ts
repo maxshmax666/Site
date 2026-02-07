@@ -27,6 +27,14 @@ type CategoryDbRow = {
   fallback_background: string;
 };
 
+type QueryDiagnostic = {
+  diagnosticCode: "MENU_CATEGORIES_QUERY_FAILED" | "MENU_ITEMS_QUERY_FAILED";
+  table: "menu_categories" | "menu_items";
+  query: string;
+  code: string;
+  message: string;
+};
+
 function mapMenuRow(row: MenuDbRow): MenuItem {
   return {
     id: row.id,
@@ -95,12 +103,39 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
   ]);
 
   if (categoriesError || menuError) {
+    const diagnostics: QueryDiagnostic[] = [];
+
+    if (categoriesError) {
+      diagnostics.push({
+        diagnosticCode: "MENU_CATEGORIES_QUERY_FAILED",
+        table: "menu_categories",
+        query: "select(key,label,full_label,image_url,fallback_background).eq(is_active,true).order(sort,asc)",
+        code: categoriesError.code ?? "UNKNOWN",
+        message: categoriesError.message ?? "Supabase query failed",
+      });
+    }
+
+    if (menuError) {
+      diagnostics.push({
+        diagnosticCode: "MENU_ITEMS_QUERY_FAILED",
+        table: "menu_items",
+        query: "select(id,title,description,category,price,image_url).eq(is_active,true).order(category,asc).order(sort,asc).order(created_at,desc)",
+        code: menuError.code ?? "UNKNOWN",
+        message: menuError.message ?? "Supabase query failed",
+      });
+    }
+
+    for (const diagnostic of diagnostics) {
+      console.error("MENU_API_QUERY_FAILED", diagnostic);
+    }
+
     return json(
       {
-        categories: fallbackCategories,
-        items: fallbackMenu,
+        code: "MENU_API_QUERY_FAILED",
+        error: "Ошибка загрузки меню с сервера",
+        details: diagnostics,
       },
-      { status: 200 },
+      { status: 502 },
     );
   }
 

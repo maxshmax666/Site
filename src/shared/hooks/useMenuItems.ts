@@ -28,7 +28,7 @@ export function useMenuItems(): UseMenuItemsResult {
 
     try {
       const payload = await fetchJson<MenuApiResponse>(MENU_API_URL, { timeoutMs: 8_000 });
-      setItems(Array.isArray(payload.items) ? payload.items : fallbackMenu);
+      setItems(Array.isArray(payload.items) ? payload.items : []);
     } catch (requestError) {
       if (isApiClientError(requestError)) {
         const diagnosticCode = `MENU_LOAD_FAILED:${requestError.code}`;
@@ -41,13 +41,13 @@ export function useMenuItems(): UseMenuItemsResult {
 
         setError({
           code: diagnosticCode,
-          message: "Не удалось загрузить меню. Показаны резервные данные.",
+          message: "Ошибка загрузки с сервера. Показаны резервные данные.",
         });
       } else {
         console.error("MENU_LOAD_FAILED", requestError);
         setError({
           code: "MENU_LOAD_FAILED:UNKNOWN",
-          message: "Не удалось загрузить меню. Показаны резервные данные.",
+          message: "Ошибка загрузки с сервера. Показаны резервные данные.",
         });
       }
       setItems(fallbackMenu);

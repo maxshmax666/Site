@@ -59,11 +59,7 @@ export function useMenuCategories(): UseMenuCategoriesResult {
             }) satisfies MenuCategoryItem,
         );
 
-      if (next.length > 0) {
-        setCategories(next);
-      } else {
-        setCategories(fallbackCategoryItems);
-      }
+      setCategories(next);
     } catch (requestError) {
       if (isApiClientError(requestError)) {
         const diagnosticCode = `MENU_CATEGORIES_LOAD_FAILED:${requestError.code}`;
@@ -75,13 +71,13 @@ export function useMenuCategories(): UseMenuCategoriesResult {
         });
         setError({
           code: diagnosticCode,
-          message: "Не удалось загрузить категории меню. Показаны резервные категории.",
+          message: "Ошибка загрузки с сервера. Показаны резервные категории.",
         });
       } else {
         console.error("MENU_CATEGORIES_LOAD_FAILED", requestError);
         setError({
           code: "MENU_CATEGORIES_LOAD_FAILED:UNKNOWN",
-          message: "Не удалось загрузить категории меню. Показаны резервные категории.",
+          message: "Ошибка загрузки с сервера. Показаны резервные категории.",
         });
       }
 
