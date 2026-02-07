@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { categories as fallbackCategories, menu as fallbackMenu, type MenuItem } from "../../src/data/menu";
+import { type MenuItem } from "../../src/data/menu";
 import { ensureRequiredApiEnv, resolveSupabaseOrigin, type ApiEnv, json } from "./_utils";
 
 type MenuCategoryApiItem = {
@@ -57,22 +57,14 @@ function mapCategoryRow(row: CategoryDbRow): MenuCategoryApiItem {
 }
 
 function deriveCategoriesFromItems(items: MenuItem[]): MenuCategoryApiItem[] {
-  const fallbackByKey = new Map(fallbackCategories.map((category) => [category.key, category]));
   const keys = [...new Set(items.map((item) => item.category).filter(Boolean))];
 
-  return keys.map((key) => {
-    const fallbackCategory = fallbackByKey.get(key);
-    if (fallbackCategory) {
-      return fallbackCategory;
-    }
-
-    return {
-      key,
-      label: key,
-      fullLabel: key,
-      background: "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
-    };
-  });
+  return keys.map((key) => ({
+    key,
+    label: key,
+    fullLabel: key,
+    background: "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
+  }));
 }
 
 export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
@@ -80,8 +72,8 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
   if (envError) {
     return json(
       {
-        categories: fallbackCategories,
-        items: fallbackMenu,
+        categories: [],
+        items: [],
       },
       { status: 200 },
     );
@@ -91,8 +83,8 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
   if (!supabaseOrigin || !env.SUPABASE_ANON_KEY) {
     return json(
       {
-        categories: fallbackCategories,
-        items: fallbackMenu,
+        categories: [],
+        items: [],
       },
       { status: 200 },
     );

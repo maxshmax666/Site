@@ -98,7 +98,7 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
 
       {!hasSupabaseEnv && (
         <div className="mt-4 rounded-2xl p-3 bg-black/20 border border-white/10 text-sm text-white/70">
-          Supabase не настроен. Показаны демо-данные из проекта.
+          Supabase не настроен. Подключите БД, чтобы загрузить меню.
         </div>
       )}
 

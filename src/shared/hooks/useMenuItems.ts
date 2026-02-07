@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { menu as fallbackMenu, type MenuItem } from "../../data/menu";
+import { type MenuItem } from "../../data/menu";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
+import { hasSupabaseEnv } from "@/lib/supabase";
 
 type UseMenuItemsResult = {
   items: MenuItem[];
@@ -18,7 +19,7 @@ type MenuApiResponse = {
 const MENU_API_URL = "/api/menu";
 
 export function useMenuItems(): UseMenuItemsResult {
-  const [items, setItems] = useState<MenuItem[]>(fallbackMenu);
+  const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
 
@@ -41,16 +42,16 @@ export function useMenuItems(): UseMenuItemsResult {
 
         setError({
           code: diagnosticCode,
-          message: "Ошибка загрузки с сервера. Показаны резервные данные.",
+          message: "Ошибка загрузки с сервера. Меню временно недоступно.",
         });
       } else {
         console.error("MENU_LOAD_FAILED", requestError);
         setError({
           code: "MENU_LOAD_FAILED:UNKNOWN",
-          message: "Ошибка загрузки с сервера. Показаны резервные данные.",
+          message: "Ошибка загрузки с сервера. Меню временно недоступно.",
         });
       }
-      setItems(fallbackMenu);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -67,6 +68,6 @@ export function useMenuItems(): UseMenuItemsResult {
     loading,
     error,
     reload: load,
-    hasSupabaseEnv: true,
+    hasSupabaseEnv,
   };
 }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { categories as fallbackCategories } from "../../data/menu";
 import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
@@ -31,13 +30,8 @@ type MenuApiResponse = {
 
 const MENU_API_URL = "/api/menu";
 
-const fallbackCategoryItems: MenuCategoryItem[] = fallbackCategories.map((category, idx) => ({
-  ...category,
-  sort: idx * 10 + 10,
-}));
-
 export function useMenuCategories(): UseMenuCategoriesResult {
-  const [categories, setCategories] = useState<MenuCategoryItem[]>(fallbackCategoryItems);
+  const [categories, setCategories] = useState<MenuCategoryItem[]>([]);
   const [error, setError] = useState<AppError | null>(null);
 
   const load = useCallback(async () => {
@@ -71,17 +65,17 @@ export function useMenuCategories(): UseMenuCategoriesResult {
         });
         setError({
           code: diagnosticCode,
-          message: "Ошибка загрузки с сервера. Показаны резервные категории.",
+          message: "Ошибка загрузки с сервера. Категории временно недоступны.",
         });
       } else {
         console.error("MENU_CATEGORIES_LOAD_FAILED", requestError);
         setError({
           code: "MENU_CATEGORIES_LOAD_FAILED:UNKNOWN",
-          message: "Ошибка загрузки с сервера. Показаны резервные категории.",
+          message: "Ошибка загрузки с сервера. Категории временно недоступны.",
         });
       }
 
-      setCategories(fallbackCategoryItems);
+      setCategories([]);
     }
   }, []);
 
