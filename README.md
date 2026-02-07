@@ -44,8 +44,8 @@ npm run test:ci
 ```
 
 Важно:
-- Тесты не требуют реального Supabase/внешней сети: используются фикстуры и моки ответов.
-- Для e2e `playwright.config.ts` поднимает локальный dev-server автоматически и мокает `/api/menu`.
+- Тесты не требуют реального Supabase/внешней сети: используются фикстуры и моки ответов (`tests/fixtures/supabase.ts`, `tests/fixtures/network/menu.success.json`).
+- Для e2e `playwright.config.ts` поднимает локальный dev-server автоматически, а `tests/e2e/menu.spec.ts` мокает `/api/menu`.
 
 
 ## Quality gate (lint + typecheck + test)
