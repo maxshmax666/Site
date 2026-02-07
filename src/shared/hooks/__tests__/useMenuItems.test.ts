@@ -51,6 +51,25 @@ describe("useMenuItems", () => {
     expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:TIMEOUT");
   });
 
+
+  it("returns configuration-specific fallback message on 5xx", async () => {
+    fetchJsonMock.mockRejectedValueOnce(
+      new ApiClientError({
+        code: "HTTP_ERROR",
+        message: "Request failed with status 500",
+        status: 500,
+        url: "/api/menu",
+      }),
+    );
+
+    const { result } = renderHook(() => useMenuItems());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:HTTP_ERROR");
+    expect(result.current.error?.message).toBe("Сервис меню временно недоступен: ошибка конфигурации сервера.");
+  });
+
   it("handles invalid json/content-type errors", async () => {
     fetchJsonMock.mockRejectedValueOnce(
       new ApiClientError({
