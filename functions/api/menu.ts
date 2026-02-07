@@ -74,21 +74,7 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
   }
 
   const supabaseOrigin = resolveSupabaseOrigin(env);
-  if (!supabaseOrigin || !env.SUPABASE_ANON_KEY) {
-    return json(
-      {
-        code: "MISCONFIGURED_ENV",
-        error: "Required runtime environment variables are missing",
-        missing: [
-          ...(!supabaseOrigin ? ["SUPABASE_URL|API_ORIGIN"] : []),
-          ...(!env.SUPABASE_ANON_KEY ? ["SUPABASE_ANON_KEY"] : []),
-        ],
-      },
-      { status: 500 },
-    );
-  }
-
-  const supabase = createClient(supabaseOrigin, env.SUPABASE_ANON_KEY, {
+  const supabase = createClient(supabaseOrigin!, env.SUPABASE_ANON_KEY!, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
