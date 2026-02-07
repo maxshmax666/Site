@@ -22,9 +22,9 @@ type MenuDbRow = {
 type CategoryDbRow = {
   key: string;
   label: string;
-  full_label: string;
+  full_label: string | null;
   image_url: string | null;
-  fallback_background: string;
+  fallback_background: string | null;
 };
 
 type QueryDiagnostic = {
@@ -50,10 +50,29 @@ function mapCategoryRow(row: CategoryDbRow): MenuCategoryApiItem {
   return {
     key: row.key,
     label: row.label,
-    fullLabel: row.full_label,
+    fullLabel: row.full_label ?? row.label,
     imageUrl: row.image_url ?? undefined,
-    background: row.fallback_background,
+    background: row.fallback_background ?? "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
   };
+}
+
+function deriveCategoriesFromItems(items: MenuItem[]): MenuCategoryApiItem[] {
+  const fallbackByKey = new Map(fallbackCategories.map((category) => [category.key, category]));
+  const keys = [...new Set(items.map((item) => item.category).filter(Boolean))];
+
+  return keys.map((key) => {
+    const fallbackCategory = fallbackByKey.get(key);
+    if (fallbackCategory) {
+      return fallbackCategory;
+    }
+
+    return {
+      key,
+      label: key,
+      fullLabel: key,
+      background: "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
+    };
+  });
 }
 
 export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
@@ -102,8 +121,16 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
       .order("created_at", { ascending: false }),
   ]);
 
-  if (categoriesError || menuError) {
-    const diagnostics: QueryDiagnostic[] = [];
+  if (menuError) {
+    const diagnostics: QueryDiagnostic[] = [
+      {
+        diagnosticCode: "MENU_ITEMS_QUERY_FAILED",
+        table: "menu_items",
+        query: "select(id,title,description,category,price,image_url).eq(is_active,true).order(category,asc).order(sort,asc).order(created_at,desc)",
+        code: menuError.code ?? "UNKNOWN",
+        message: menuError.message ?? "Supabase query failed",
+      },
+    ];
 
     if (categoriesError) {
       diagnostics.push({
@@ -112,16 +139,6 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
         query: "select(key,label,full_label,image_url,fallback_background).eq(is_active,true).order(sort,asc)",
         code: categoriesError.code ?? "UNKNOWN",
         message: categoriesError.message ?? "Supabase query failed",
-      });
-    }
-
-    if (menuError) {
-      diagnostics.push({
-        diagnosticCode: "MENU_ITEMS_QUERY_FAILED",
-        table: "menu_items",
-        query: "select(id,title,description,category,price,image_url).eq(is_active,true).order(category,asc).order(sort,asc).order(created_at,desc)",
-        code: menuError.code ?? "UNKNOWN",
-        message: menuError.message ?? "Supabase query failed",
       });
     }
 
@@ -139,10 +156,32 @@ export const onRequestGet: PagesFunction<ApiEnv> = async ({ env }) => {
     );
   }
 
+  const items = (menuData ?? []).map((row) => mapMenuRow(row as MenuDbRow));
+
+  if (categoriesError) {
+    const diagnostic: QueryDiagnostic = {
+      diagnosticCode: "MENU_CATEGORIES_QUERY_FAILED",
+      table: "menu_categories",
+      query: "select(key,label,full_label,image_url,fallback_background).eq(is_active,true).order(sort,asc)",
+      code: categoriesError.code ?? "UNKNOWN",
+      message: categoriesError.message ?? "Supabase query failed",
+    };
+
+    console.error("MENU_API_QUERY_FAILED", diagnostic);
+
+    return json(
+      {
+        categories: deriveCategoriesFromItems(items),
+        items,
+      },
+      { status: 200 },
+    );
+  }
+
   return json(
     {
       categories: (categoriesData ?? []).map((row) => mapCategoryRow(row as CategoryDbRow)),
-      items: (menuData ?? []).map((row) => mapMenuRow(row as MenuDbRow)),
+      items,
     },
     { status: 200 },
   );
