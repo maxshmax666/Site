@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/cart.store";
@@ -15,6 +16,7 @@ const nav = [
 
 export function Header() {
   const navigate = useNavigate();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const count = useCartStore((s) => s.count());
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
@@ -24,6 +26,7 @@ export function Header() {
   async function handleSignOut() {
     try {
       await signOut();
+      setMobileNavOpen(false);
       navigate("/");
     } catch (error) {
       console.error("Ошибка выхода из аккаунта", error);
@@ -70,10 +73,21 @@ export function Header() {
           )}
         </nav>
 
+        <button
+          type="button"
+          className="md:hidden px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
+          onClick={() => setMobileNavOpen((prev) => !prev)}
+          aria-expanded={mobileNavOpen}
+          aria-controls="mobile-nav"
+        >
+          {mobileNavOpen ? "Закрыть" : "Меню"}
+        </button>
+
         <div className="ml-auto flex items-center gap-2">
           {user === null ? (
             <NavLink
               to="/login"
+              onClick={() => setMobileNavOpen(false)}
               className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
             >
               Войти
@@ -82,6 +96,7 @@ export function Header() {
             <>
               <NavLink
                 to="/profile"
+                onClick={() => setMobileNavOpen(false)}
                 className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
               >
                 Профиль
@@ -97,6 +112,7 @@ export function Header() {
           )}
           <NavLink
             to="/cart"
+            onClick={() => setMobileNavOpen(false)}
             className="relative px-4 py-2 rounded-xl text-sm bg-orange text-black font-semibold hover:opacity-90"
           >
             Корзина
@@ -108,6 +124,41 @@ export function Header() {
           </NavLink>
         </div>
       </div>
+
+      {mobileNavOpen && (
+        <nav id="mobile-nav" className="md:hidden border-t border-white/10 px-4 py-3 flex flex-col gap-1">
+          {nav.map((x) => (
+            <NavLink
+              key={x.to}
+              to={x.to}
+              onClick={() => setMobileNavOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "px-3 py-2 rounded-xl text-sm transition",
+                  isActive ? "bg-white/10" : "hover:bg-white/5 text-white/85"
+                )
+              }
+            >
+              {x.label}
+            </NavLink>
+          ))}
+
+          {showAdmin && (
+            <NavLink
+              to="/admin"
+              onClick={() => setMobileNavOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "px-3 py-2 rounded-xl text-sm transition",
+                  isActive ? "bg-white/10" : "hover:bg-white/5 text-white/85"
+                )
+              }
+            >
+              Админ
+            </NavLink>
+          )}
+        </nav>
+      )}
     </header>
   );
 }
