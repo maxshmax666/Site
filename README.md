@@ -12,6 +12,41 @@ npm run build
 npm run preview
 ```
 
+## Тесты (unit/integration + e2e)
+
+Минимальные требования:
+- Node.js `>=18.18` (рекомендуется LTS 20+).
+- npm `>=9`.
+
+Стек тестирования:
+- Unit/integration: `Vitest ^2.1.1` + `@testing-library/react ^16.3.0` + `jsdom ^26.1.0`.
+- E2E: `Playwright ^1.55.0`.
+
+Первый запуск (локально):
+```bash
+npm install
+npx playwright install --with-deps chromium
+```
+
+Команды:
+```bash
+# Unit/integration тесты (hooks + API handlers)
+npm run test:unit
+
+# E2E тесты (с моками сети, без внешних API)
+npm run test:e2e
+
+# Полный прогон
+npm test
+
+# CI-режим (линейный репортер)
+npm run test:ci
+```
+
+Важно:
+- Тесты не требуют реального Supabase/внешней сети: используются фикстуры и моки ответов.
+- Для e2e `playwright.config.ts` поднимает локальный dev-server автоматически и мокает `/api/menu`.
+
 ## Cloudflare Pages (SPA)
 - Build command: `npm run build`
 - Output directory: `dist`
