@@ -47,6 +47,30 @@ npm run test:ci
 - Тесты не требуют реального Supabase/внешней сети: используются фикстуры и моки ответов.
 - Для e2e `playwright.config.ts` поднимает локальный dev-server автоматически и мокает `/api/menu`.
 
+
+## Quality gate (lint + typecheck + test)
+
+Минимальные требования для локальной проверки качества:
+- Node.js `>=18.18` (в CI используется Node.js `20`).
+- ESLint `^9.34.0` + `typescript-eslint ^8.41.0` + `eslint-plugin-react-hooks ^5.2.0`.
+
+Команды перед PR:
+```bash
+npm run lint
+npm run typecheck
+npm run test:ci
+```
+
+Что проверяется:
+- `lint`: React + TypeScript linting, включая `react-hooks/exhaustive-deps` и правила против unsafe TS-паттернов (`no-unsafe-*`, `no-floating-promises`, `no-explicit-any`).
+- `typecheck`: `tsc -b --noEmit` для всех TS project references.
+- `test`: unit/integration + e2e.
+
+Блокировка merge:
+- GitHub Actions workflow `.github/workflows/ci.yml` публикует проверку `CI / install → lint → typecheck → test`.
+- В Branch protection (или Rulesets) включите **Require status checks to pass before merging** и добавьте этот check как required.
+- Пока любой шаг (install/lint/typecheck/test) падает, merge должен оставаться заблокирован.
+
 ## Cloudflare Pages (SPA)
 - Build command: `npm run build`
 - Output directory: `dist`

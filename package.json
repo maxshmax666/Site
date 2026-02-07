@@ -11,7 +11,9 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "test:ci": "npm run test:unit && npm run test:e2e -- --reporter=line"
+    "test:ci": "npm run test:unit && npm run test:e2e -- --reporter=line",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --pretty false --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
@@ -21,17 +23,23 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.55.0",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^15.15.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4",
+    "typescript-eslint": "^8.54.0",
     "vite": "^5.4.1",
-    "@playwright/test": "^1.55.0",
-    "@testing-library/react": "^16.3.0",
-    "jsdom": "^26.1.0",
     "vitest": "^2.1.1"
   }
 }
