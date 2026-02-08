@@ -1,13 +1,8 @@
 import { Hero } from "../components/sections/Hero";
 import { promos } from "../data/promos";
 import { reviews } from "../data/reviews";
-import { PizzaCard } from "../components/cards/PizzaCard";
 import { Accordion } from "../components/ui/Accordion";
 import { Badge } from "../components/ui/Badge";
-import { Link } from "react-router-dom";
-import { useMemo } from "react";
-import { useMenuItems } from "../shared/hooks/useMenuItems";
-import { MenuCatalogSection } from "../components/sections/MenuCatalogSection";
 
 const faqs = [
   { q: "Как быстро привозите?", a: "Обычно 30–60 минут по городу (зависит от загрузки и района)." },
@@ -16,18 +11,8 @@ const faqs = [
 ];
 
 export function HomePage() {
-  const { items } = useMenuItems();
-
-  const hits = useMemo(() => {
-    const tagged = items.filter((x) => x.category === "classic" && x.badges?.includes("hit"));
-    if (tagged.length > 0) return tagged.slice(0, 6);
-    return items.filter((x) => x.category === "classic").slice(0, 6);
-  }, [items]);
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
-      <MenuCatalogSection className="scroll-mt-24" />
-
       <section className="mt-10">
         <Hero />
       </section>
@@ -42,20 +27,6 @@ export function HomePage() {
             <div className="mt-2 text-white/75">{p.desc}</div>
           </div>
         ))}
-      </section>
-
-      <section className="mt-12">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-2xl font-bold">Хиты недели</h2>
-          <Link to="/menu" className="text-sm text-white/70 hover:text-white">
-            Смотреть всё →
-          </Link>
-        </div>
-        <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {hits.map((x) => (
-            <PizzaCard key={x.id} item={x} />
-          ))}
-        </div>
       </section>
 
       <section className="mt-12 grid lg:grid-cols-2 gap-6">
