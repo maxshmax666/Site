@@ -51,7 +51,7 @@ export function HomePage() {
 
       <section className="mt-12 rounded-3xl p-6 bg-gradient-to-r from-green/15 to-orange/15 border border-white/10 shadow-soft">
         <h2 className="text-2xl font-bold">Контакты</h2>
-        <div className="mt-2 text-white/80">Телефон: +7 (000) 000‑00‑00 • Адрес: Нижний Тагил, …</div>
+        <div className="mt-2 text-white/80">Заказ по номеру 8 (995) 566-44-08 • Быстрая доставка и свежие ингредиенты каждый день.</div>
         <div className="mt-3 text-sm text-white/70">Карта подключается позже (iframe/API).</div>
       </section>
     </div>
