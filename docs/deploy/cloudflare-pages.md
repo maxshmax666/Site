@@ -51,6 +51,30 @@ curl -i -fsS "https://<your-domain>/api/auth/me"
   - `401` без `Authorization` (это нормальный smoke-check для auth-gateway),
   - `500` с `code=MISCONFIGURED_ENV`, если runtime env не заданы.
 
+
+## Автоматизация env/runtime + smoke-check
+
+Если нужно гарантированно проставить **runtime**-переменные (а не только build vars), используйте скрипт:
+
+```bash
+CLOUDFLARE_API_TOKEN=... \
+CLOUDFLARE_ACCOUNT_ID=... \
+SUPABASE_URL=https://<project>.supabase.co \
+SUPABASE_ANON_KEY=... \
+npm run cf:pages:runtime-env -- --project tagil.pizza --production-domain https://tagil.pizza
+```
+
+Что делает скрипт:
+- PATCH `deployment_configs.production.env_vars` в Pages project;
+- по умолчанию дублирует те же переменные в `deployment_configs.preview.env_vars`;
+- проверяет `GET /api/health` (ожидается `200` + `{ ok: true }`);
+- проверяет `GET /api/menu` (ожидается `200` + JSON с `categories/items`).
+
+Полезные флаги:
+- `--dry-run` — вывести payload без изменения проекта;
+- `--no-preview` — не копировать переменные в preview;
+- `--deploy` — после обновления env запустить `wrangler pages deploy dist --project-name <project>`.
+
 ## Why так
 - Разделение Variables для `Production`/`Preview` снижает риск утечки прод-ключей в preview окружение.
 - Явный `MISCONFIGURED_ENV` ускоряет диагностику инцидентов: видно, что проблема в конфиге, а не в бизнес-логике endpoint'а.
