@@ -39,6 +39,11 @@ end$$;
 do $$
 begin
   if exists (select 1 from pg_type where typname = 'menu_category_v2') then
+    -- Drop old enum default first, otherwise PG may fail casting default expression
+    -- from menu_category -> menu_category_v2 during ALTER COLUMN TYPE.
+    alter table if exists public.menu_items
+      alter column category drop default;
+
     alter table if exists public.menu_items
       alter column category type menu_category_v2
       using (
@@ -92,9 +97,11 @@ begin
           else 'classic'
         end
       )::menu_category_v2;
-    alter table if exists public.menu_items alter column category set default 'classic';
     drop type if exists menu_category;
     alter type menu_category_v2 rename to menu_category;
+
+    alter table if exists public.menu_items
+      alter column category set default 'classic'::menu_category;
   end if;
 end$$;
 
@@ -226,9 +233,34 @@ set label = excluded.label,
 alter table public.menu_items
   drop constraint if exists menu_items_category_fkey;
 
-alter table public.menu_items
-  add constraint menu_items_category_fkey
-  foreign key (category) references public.menu_categories(key) on update cascade;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint c
+    where c.contype = 'f'
+      and c.conrelid = 'public.menu_items'::regclass
+      and c.confrelid = 'public.menu_categories'::regclass
+      and c.conkey = array[(
+        select a.attnum
+        from pg_attribute a
+        where a.attrelid = 'public.menu_items'::regclass
+          and a.attname = 'category'
+          and not a.attisdropped
+      )]
+      and c.confkey = array[(
+        select a.attnum
+        from pg_attribute a
+        where a.attrelid = 'public.menu_categories'::regclass
+          and a.attname = 'key'
+          and not a.attisdropped
+      )]
+  ) then
+    alter table public.menu_items
+      add constraint menu_items_category_fkey
+      foreign key (category) references public.menu_categories(key) on update cascade;
+  end if;
+end$$;
 
 -- 2) Post-fix verification checks (type + FK integrity)
 do $$
@@ -247,14 +279,25 @@ begin
   if not exists (
     select 1
     from pg_constraint c
-    join pg_class t on t.oid = c.conrelid
-    join pg_namespace n on n.oid = t.relnamespace
-    where c.conname = 'menu_items_category_fkey'
-      and n.nspname = 'public'
-      and t.relname = 'menu_items'
-      and pg_get_constraintdef(c.oid) ilike '%foreign key (category) references public.menu_categories(key)%'
+    where c.contype = 'f'
+      and c.conrelid = 'public.menu_items'::regclass
+      and c.confrelid = 'public.menu_categories'::regclass
+      and c.conkey = array[(
+        select a.attnum
+        from pg_attribute a
+        where a.attrelid = 'public.menu_items'::regclass
+          and a.attname = 'category'
+          and not a.attisdropped
+      )]
+      and c.confkey = array[(
+        select a.attnum
+        from pg_attribute a
+        where a.attrelid = 'public.menu_categories'::regclass
+          and a.attname = 'key'
+          and not a.attisdropped
+      )]
   ) then
-    raise exception 'menu_items_category_fkey is missing or points to wrong target';
+    raise exception 'menu_items.category FK to public.menu_categories(key) is missing';
   end if;
 end$$;
 
