@@ -233,13 +233,64 @@ set label = excluded.label,
 alter table public.menu_items
   drop constraint if exists menu_items_category_fkey;
 
-alter table public.menu_items
-  add constraint menu_items_category_fkey
-  foreign key (category) references public.menu_categories(key) on update cascade;
+do $$
+declare
+  v_menu_items regclass := to_regclass('public.menu_items');
+  v_menu_categories regclass := to_regclass('public.menu_categories');
+  v_menu_items_category_attnum int2;
+  v_menu_categories_key_attnum int2;
+begin
+  if v_menu_items is null or v_menu_categories is null then
+    return;
+  end if;
+
+  select a.attnum into v_menu_items_category_attnum
+  from pg_attribute a
+  where a.attrelid = v_menu_items
+    and a.attname = 'category'
+    and not a.attisdropped;
+
+  select a.attnum into v_menu_categories_key_attnum
+  from pg_attribute a
+  where a.attrelid = v_menu_categories
+    and a.attname = 'key'
+    and not a.attisdropped;
+
+  if v_menu_items_category_attnum is null or v_menu_categories_key_attnum is null then
+    return;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint c
+    where c.contype = 'f'
+      and c.conrelid = v_menu_items
+      and c.confrelid = v_menu_categories
+      and c.conkey = array[v_menu_items_category_attnum]
+      and c.confkey = array[v_menu_categories_key_attnum]
+  ) then
+    alter table public.menu_items
+      add constraint menu_items_category_fkey
+      foreign key (category) references public.menu_categories(key) on update cascade;
+  end if;
+end$$;
 
 -- 2) Post-fix verification checks (type + FK integrity)
 do $$
+declare
+  v_menu_items regclass := to_regclass('public.menu_items');
+  v_menu_categories regclass := to_regclass('public.menu_categories');
+  v_menu_items_category_attnum int2;
+  v_menu_categories_key_attnum int2;
 begin
+  if v_menu_items is null then
+    raise exception 'public.menu_items table is missing';
+  end if;
+
+  if v_menu_categories is null then
+    raise exception 'public.menu_categories table is missing';
+  end if;
+
   if not exists (
     select 1
     from information_schema.columns
@@ -251,17 +302,36 @@ begin
     raise exception 'menu_items.category is not typed as menu_category';
   end if;
 
+  select a.attnum into v_menu_items_category_attnum
+  from pg_attribute a
+  where a.attrelid = v_menu_items
+    and a.attname = 'category'
+    and not a.attisdropped;
+
+  select a.attnum into v_menu_categories_key_attnum
+  from pg_attribute a
+  where a.attrelid = v_menu_categories
+    and a.attname = 'key'
+    and not a.attisdropped;
+
+  if v_menu_items_category_attnum is null then
+    raise exception 'public.menu_items.category column is missing';
+  end if;
+
+  if v_menu_categories_key_attnum is null then
+    raise exception 'public.menu_categories.key column is missing';
+  end if;
+
   if not exists (
     select 1
     from pg_constraint c
-    join pg_class t on t.oid = c.conrelid
-    join pg_namespace n on n.oid = t.relnamespace
-    where c.conname = 'menu_items_category_fkey'
-      and n.nspname = 'public'
-      and t.relname = 'menu_items'
-      and pg_get_constraintdef(c.oid) ilike '%foreign key (category) references public.menu_categories(key)%'
+    where c.contype = 'f'
+      and c.conrelid = v_menu_items
+      and c.confrelid = v_menu_categories
+      and c.conkey = array[v_menu_items_category_attnum]
+      and c.confkey = array[v_menu_categories_key_attnum]
   ) then
-    raise exception 'menu_items_category_fkey is missing or points to wrong target';
+    raise exception 'menu_items.category FK to public.menu_categories(key) is missing';
   end if;
 end$$;
 
