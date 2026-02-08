@@ -9,6 +9,13 @@ const LEGACY_MENU_CATEGORY_FALLBACKS: Record<string, string> = {
   drinks: "drinks",
 };
 
+const LEGACY_TO_UI_CATEGORY: Record<string, string> = {
+  pizza: "classic",
+  snacks: "fried",
+  dessert: "desserts",
+  drinks: "drinks",
+};
+
 export function mapLegacyMenuCategory(category: string) {
   const normalized = category.trim().toLowerCase();
   if (!normalized) {
@@ -16,6 +23,15 @@ export function mapLegacyMenuCategory(category: string) {
   }
 
   return LEGACY_MENU_CATEGORY_FALLBACKS[normalized] ?? null;
+}
+
+export function mapLegacyCategoryToUi(category: string) {
+  const normalized = category.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  return LEGACY_TO_UI_CATEGORY[normalized] ?? null;
 }
 
 export function resolveSupportedMenuCategory(category: string, supportedCategories: readonly string[]) {

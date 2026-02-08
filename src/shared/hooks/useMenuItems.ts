@@ -3,6 +3,7 @@ import { type MenuItem } from "../../data/menu";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
 import { hasSupabaseEnv, supabase } from "@/lib/supabase";
+import { mapLegacyCategoryToUi } from "@/shared/map/menuCategoryLegacy";
 
 type UseMenuItemsResult = {
   items: MenuItem[];
@@ -41,16 +42,26 @@ export function useMenuItems(): UseMenuItemsResult {
           .order("created_at", { ascending: false });
 
         if (!dbError) {
-          const fallbackItems = (Array.isArray(data) ? data : []).map((row) => ({
-            id: String(row.id ?? ""),
-            title: String(row.title ?? ""),
-            desc: String(row.description ?? ""),
-            category: String(row.category ?? ""),
-            priceFrom: Number(row.price ?? 0),
-            image: typeof row.image_url === "string" ? row.image_url : undefined,
-          })) satisfies MenuItem[];
+          const fallbackItems = (Array.isArray(data) ? data : [])
+            .map((row) => {
+              const rawCategory = String(row.category ?? "").trim();
+              const uiCategory = mapLegacyCategoryToUi(rawCategory) ?? rawCategory;
 
-          setItems(fallbackItems.filter((item) => item.id && item.title && Number.isFinite(item.priceFrom)));
+              return {
+                id: String(row.id ?? ""),
+                title: String(row.title ?? ""),
+                desc: String(row.description ?? ""),
+                category: uiCategory,
+                priceFrom: Number(row.price ?? 0),
+                image: typeof row.image_url === "string" ? row.image_url : undefined,
+              } satisfies MenuItem;
+            });
+
+          setItems(
+            fallbackItems.filter(
+              (item) => item.id && item.title && item.category && Number.isFinite(item.priceFrom),
+            ),
+          );
           return;
         }
       }
