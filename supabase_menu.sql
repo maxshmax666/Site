@@ -39,6 +39,11 @@ end$$;
 do $$
 begin
   if exists (select 1 from pg_type where typname = 'menu_category_v2') then
+    -- Drop old enum default first, otherwise PG may fail casting default expression
+    -- from menu_category -> menu_category_v2 during ALTER COLUMN TYPE.
+    alter table if exists public.menu_items
+      alter column category drop default;
+
     alter table if exists public.menu_items
       alter column category type menu_category_v2
       using (
@@ -92,9 +97,11 @@ begin
           else 'classic'
         end
       )::menu_category_v2;
-    alter table if exists public.menu_items alter column category set default 'classic';
     drop type if exists menu_category;
     alter type menu_category_v2 rename to menu_category;
+
+    alter table if exists public.menu_items
+      alter column category set default 'classic'::menu_category;
   end if;
 end$$;
 
