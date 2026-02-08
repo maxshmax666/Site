@@ -30,6 +30,8 @@ export function LoginPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const oauthFallbackTimerRef = useRef<number | null>(null);
+  const missingEnvMessage =
+    "Приложение запущено без VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY. Авторизация недоступна: это ошибка конфигурации, а не неверный email/пароль.";
 
   const clearOAuthFallbackTimer = () => {
     if (oauthFallbackTimerRef.current) {
@@ -76,7 +78,7 @@ export function LoginPage() {
     setSyncError(null);
     try {
       if (!hasSupabaseEnv || !supabase) {
-        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+        throw new Error(missingEnvMessage);
       }
       const normalizedEmail = email.trim().toLowerCase();
       if (!normalizedEmail || !password) throw new Error("Введите email и пароль.");
@@ -127,7 +129,7 @@ export function LoginPage() {
     setOk(null);
     try {
       if (!hasSupabaseEnv || !supabase) {
-        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+        throw new Error(missingEnvMessage);
       }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -155,7 +157,7 @@ export function LoginPage() {
     setOk(null);
     try {
       if (!hasSupabaseEnv || !supabase) {
-        throw new Error("Не настроены VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY.");
+        throw new Error(missingEnvMessage);
       }
       const normalizedEmail = email.trim().toLowerCase();
       if (!normalizedEmail) {
@@ -218,7 +220,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button disabled={isAuthLoading || isOAuthLoading} type="submit">
+          <Button disabled={!hasSupabaseEnv || isAuthLoading || isOAuthLoading} type="submit">
             {mode === "login" ? "Войти" : "Зарегистрироваться"}
           </Button>
         </form>
@@ -228,10 +230,16 @@ export function LoginPage() {
               className="text-xs text-white/70 hover:text-white underline"
               type="button"
               onClick={onResetPassword}
-              disabled={isResetLoading}
+              disabled={!hasSupabaseEnv || isResetLoading}
             >
               {isResetLoading ? "Отправка..." : "Забыли пароль?"}
             </button>
+          </div>
+        )}
+
+        {!hasSupabaseEnv && (
+          <div className="mt-4 p-3 rounded-2xl bg-warning/15 border border-warning/30 text-sm text-white">
+            {missingEnvMessage}
           </div>
         )}
 
@@ -252,7 +260,7 @@ export function LoginPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button disabled={isOAuthLoading || isAuthLoading} variant="soft" onClick={onGoogle}>
+          <Button disabled={!hasSupabaseEnv || isOAuthLoading || isAuthLoading} variant="soft" onClick={onGoogle}>
             {isOAuthLoading ? "Переходим в Google..." : "Войти через Google"}
           </Button>
 
