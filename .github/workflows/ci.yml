@@ -33,5 +33,13 @@ jobs:
       - name: typecheck
         run: npm run typecheck
 
+
+      - name: schema check before release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: npm run schema:check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
       - name: test
         run: npm run test:ci
