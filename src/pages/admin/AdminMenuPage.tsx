@@ -7,6 +7,7 @@ import { defaultMenuCategories } from "../../data/menuCategories";
 import { formatSupabaseError } from "../../lib/errors";
 import { Toast } from "../../components/ui/Toast";
 import { useSchemaPreflight } from "../../shared/hooks/useSchemaPreflight";
+import { resolveSupportedMenuCategory } from "../../shared/map/menuCategoryLegacy";
 
 type MenuItem = {
   id: string;
@@ -39,9 +40,6 @@ type FormState = {
 const MAX_ERROR_DETAILS = 5;
 const MENU_CATEGORY_MIGRATION_ERROR = "Схема БД не мигрирована: menu_category";
 const MENU_CATEGORIES_SCHEMA_MISMATCH_ERROR = "Не удалось загрузить категории: схема БД устарела. Примените миграцию menu_categories (full_label, image_url, fallback_background, sort, is_active).";
-const LEGACY_CATEGORY_FALLBACKS: Record<string, string> = {
-  classic: "pizza",
-};
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -117,15 +115,27 @@ function getDbErrorMessage(error: { code?: string; message?: string }) {
   return formatSupabaseError(error);
 }
 
+function getSaveItemErrorMessage(error: { code?: string; message?: string }) {
+  if (error.code === "42P01") {
+    return "Не удалось сохранить: таблица menu_items не найдена. Примените миграции БД.";
+  }
+
+  if (error.code === "42703") {
+    return "Не удалось сохранить: схема menu_items устарела (отсутствует колонка). Примените миграции БД.";
+  }
+
+  if (error.code === "22P02") {
+    return `${MENU_CATEGORY_MIGRATION_ERROR}. Проверьте enum menu_category и миграции категорий.`;
+  }
+
+  return getDbErrorMessage(error);
+}
+
 function isCategoryEnumError(error: { code?: string; message?: string } | null | undefined) {
   if (!error || error.code !== "22P02" || !error.message) {
     return false;
   }
   return error.message.includes("menu_category");
-}
-
-function resolveLegacyCategory(category: string) {
-  return LEGACY_CATEGORY_FALLBACKS[category] ?? null;
 }
 
 function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
@@ -300,10 +310,15 @@ export function AdminMenuPage() {
       return;
     }
 
+    const supportedCategoryKeys = categories.map((category) => category.key);
+    const resolvedCategory = editingId
+      ? resolveSupportedMenuCategory(form.category, supportedCategoryKeys)
+      : form.category;
+
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      category: form.category,
+      category: resolvedCategory ?? "",
       price: Number(form.price),
       image_url: form.imageUrl.trim() || null,
       is_active: form.isActive,
@@ -322,20 +337,21 @@ export function AdminMenuPage() {
       return supabase.from("menu_items").insert(nextPayload);
     };
 
-    let { error } = await executeSave(payload);
-    if (error && isCategoryEnumError(error)) {
-      const legacyCategory = resolveLegacyCategory(payload.category);
-      if (legacyCategory && legacyCategory !== payload.category) {
-        ({ error } = await executeSave({ ...payload, category: legacyCategory }));
-      }
-    }
+    const { error } = await executeSave(payload);
 
     if (error) {
-      setFormError(getDbErrorMessage(error));
+      console.error("ADMIN_MENU_SAVE_FAILED", { code: error.code, message: error.message });
+      if (isCategoryEnumError(error) && editingId) {
+        setFormError("Категория не поддерживается текущей схемой. Обновите категории меню или примените миграцию menu_category.");
+        return;
+      }
+      setFormError(getSaveItemErrorMessage(error));
       return;
     }
 
+    const wasEditing = Boolean(editingId);
     resetForm();
+    setToast(wasEditing ? "Позиция обновлена" : "Позиция добавлена");
     await load();
   }
 
