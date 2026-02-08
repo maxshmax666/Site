@@ -6,6 +6,7 @@ import { Badge } from "../../components/ui/Badge";
 import { defaultMenuCategories } from "../../data/menuCategories";
 import { formatSupabaseError } from "../../lib/errors";
 import { Toast } from "../../components/ui/Toast";
+import { useSchemaPreflight } from "../../shared/hooks/useSchemaPreflight";
 
 type MenuItem = {
   id: string;
@@ -163,6 +164,7 @@ export function AdminMenuPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const activeCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows]);
+  const { schemaMismatch, message: schemaMessage } = useSchemaPreflight();
 
   async function loadCategories() {
     const { data, error } = await supabase.from("menu_categories").select("key,label").order("sort", { ascending: true });
@@ -391,6 +393,12 @@ export function AdminMenuPage() {
       </div>
 
       {err && <div className="mt-4 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-400/30 text-sm text-yellow-100">{err}</div>}
+
+      {schemaMismatch && schemaMessage && (
+        <div className="mt-4 p-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 text-sm text-amber-100">
+          {schemaMessage}
+        </div>
+      )}
 
       <div className="mt-5 rounded-2xl p-4 bg-black/20 border border-white/10">
         <div className="font-bold">{editingId ? "Редактировать позицию" : "Добавить позицию"}</div>

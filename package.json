@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "test:ci": "npm run test:unit && npm run test:e2e -- --reporter=line",
     "lint": "eslint .",
-    "typecheck": "tsc -b --pretty false --noEmit"
+    "typecheck": "tsc -b --pretty false --noEmit",
+    "schema:check": "node scripts/schema-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
