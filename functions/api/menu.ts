@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { type MenuItem } from "../../src/data/menu";
 import { ensureRequiredApiEnv, resolveSupabaseOrigin, type ApiEnv, json } from "./_utils";
+import { mapLegacyMenuCategory } from "../../src/shared/map/menuCategoryLegacy";
 
 type MenuCategoryApiItem = {
   key: string;
@@ -57,7 +58,7 @@ function mapCategoryRow(row: CategoryDbRow): MenuCategoryApiItem {
 }
 
 function deriveCategoriesFromItems(items: MenuItem[]): MenuCategoryApiItem[] {
-  const keys = [...new Set(items.map((item) => item.category).filter(Boolean))];
+  const keys = [...new Set(items.map((item) => mapLegacyMenuCategory(item.category) ?? item.category).filter(Boolean))];
 
   return keys.map((key) => ({
     key,
