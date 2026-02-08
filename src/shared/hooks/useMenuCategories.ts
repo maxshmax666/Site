@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { isMenuCategory, type MenuCategory } from "../../data/menuCategories";
+import { defaultMenuCategories, isMenuCategory, type MenuCategory } from "../../data/menuCategories";
 import { type AppError } from "@/lib/errors";
 import { fetchJson, isApiClientError } from "@/lib/apiClient";
 import { supabase } from "@/lib/supabase";
@@ -30,6 +30,19 @@ type MenuApiResponse = {
 };
 
 const MENU_API_URL = "/api/menu";
+
+const mapDefaultMenuCategories = (): MenuCategoryItem[] =>
+  defaultMenuCategories.map(
+    (category, idx) =>
+      ({
+        key: category.value,
+        label: category.label,
+        fullLabel: category.fullLabel,
+        imageUrl: category.imageUrl,
+        background: category.fallbackBackground,
+        sort: idx * 10 + 10,
+      }) satisfies MenuCategoryItem,
+  );
 
 export function useMenuCategories(): UseMenuCategoriesResult {
   const [categories, setCategories] = useState<MenuCategoryItem[]>([]);
@@ -116,7 +129,7 @@ export function useMenuCategories(): UseMenuCategoriesResult {
         });
       }
 
-      setCategories([]);
+      setCategories(mapDefaultMenuCategories());
     }
   }, []);
 
