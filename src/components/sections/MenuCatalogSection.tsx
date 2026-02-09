@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { PizzaCard } from "../cards/PizzaCard";
 import { useMenuCategories } from "../../shared/hooks/useMenuCategories";
 import { useMenuItems } from "../../shared/hooks/useMenuItems";
@@ -7,12 +7,24 @@ type MenuCatalogSectionProps = {
   title?: string;
   description?: string;
   className?: string;
+  scrollToItemsOnCategorySelect?: boolean;
 };
 
-export function MenuCatalogSection({ title, description, className }: MenuCatalogSectionProps) {
+export function MenuCatalogSection({
+  title,
+  description,
+  className,
+  scrollToItemsOnCategorySelect = false,
+}: MenuCatalogSectionProps) {
   const { categories, error: categoriesError } = useMenuCategories();
   const { items, loading, error, hasSupabaseEnv } = useMenuItems();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const itemsAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToItems = () => {
+    if (!scrollToItemsOnCategorySelect) return;
+    itemsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const filteredItems = useMemo(() => {
     if (!selectedCategory) return items;
@@ -33,7 +45,10 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
           <button
             key={category.key}
             type="button"
-            onClick={() => setSelectedCategory((prev) => (prev === category.key ? null : category.key))}
+            onClick={() => {
+              setSelectedCategory((prev) => (prev === category.key ? null : category.key));
+              scrollToItems();
+            }}
             className={`group relative block h-[126px] sm:h-[138px] md:h-[152px] overflow-hidden rounded-[24px] shadow-soft text-left ${
               selectedCategory === category.key ? "ring-2 ring-primary" : "ring-0"
             }`}
@@ -61,7 +76,10 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => setSelectedCategory(null)}
+          onClick={() => {
+            setSelectedCategory(null);
+            scrollToItems();
+          }}
           className={`px-3 py-1.5 rounded-full border text-sm ${
             selectedCategory === null ? "border-primary text-white" : "border-white/20 text-white/70"
           }`}
@@ -72,7 +90,10 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
           <button
             key={`chip-${category.key}`}
             type="button"
-            onClick={() => setSelectedCategory(category.key)}
+            onClick={() => {
+              setSelectedCategory(category.key);
+              scrollToItems();
+            }}
             className={`px-3 py-1.5 rounded-full border text-sm ${
               selectedCategory === category.key ? "border-primary text-white" : "border-white/20 text-white/70"
             }`}
@@ -104,7 +125,7 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
 
       {loading ? <div className="mt-6 text-white/70">Загрузка меню…</div> : null}
 
-      <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div ref={itemsAnchorRef} className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {!loading && filteredItems.length === 0 ? <div className="text-white/60">В этой категории пока нет позиций.</div> : null}
         {filteredItems.map((item) => (
           <PizzaCard key={item.id} item={item} />
