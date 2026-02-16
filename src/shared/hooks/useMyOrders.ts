@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { queryCachePolicy } from "@/lib/queryClient";
+import { type QueryError, normalizeQueryError } from "@/lib/queryError";
 import { hasSupabaseEnv, supabase } from "@/lib/supabase";
+import { queryKeys } from "@/shared/queryKeys";
 
 type DbOrder = {
   id: string;
@@ -34,16 +37,12 @@ export type MyOrder = {
   items: MyOrderItem[];
 };
 
-type UseMyOrdersResult = {
-  data: MyOrder[];
-  loading: boolean;
-  error: { message: string; status: number | null } | null;
-  hasMore: boolean;
-  loadMore: () => Promise<void>;
-  reload: () => Promise<void>;
+type OrdersPage = {
+  items: MyOrder[];
+  nextOffset: number;
 };
 
-const PAGE_SIZE = 20;
+export const PAGE_SIZE = 20;
 
 function toMyOrder(order: DbOrder, items: DbOrderItem[]): MyOrder {
   const orderItems = items
@@ -66,107 +65,78 @@ function toMyOrder(order: DbOrder, items: DbOrderItem[]): MyOrder {
   };
 }
 
-export function useMyOrders(userId?: string): UseMyOrdersResult {
-  const [data, setData] = useState<MyOrder[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; status: number | null } | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
+export async function fetchMyOrdersPage(userId: string, offset: number): Promise<OrdersPage> {
+  if (!hasSupabaseEnv || !supabase) {
+    throw normalizeQueryError(
+      { message: "Supabase не настроен. История заказов недоступна в демо-режиме.", status: null },
+      {
+        baseCode: "MY_ORDERS_LOAD_FAILED",
+        fallbackMessage: "Не удалось загрузить историю заказов.",
+      },
+    );
+  }
 
-  const loadPage = useCallback(
-    async (nextOffset: number, mode: "append" | "replace") => {
-      if (!userId) {
-        setData([]);
-        setHasMore(false);
-        setError(null);
-        return;
-      }
+  const end = offset + PAGE_SIZE - 1;
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("id,created_at,status,total,address,comment")
+    .eq("created_by", userId)
+    .order("created_at", { ascending: false })
+    .range(offset, end);
 
-      if (!hasSupabaseEnv || !supabase) {
-        setData([]);
-        setHasMore(false);
-        setError({ message: "Supabase не настроен. История заказов недоступна в демо-режиме.", status: null });
-        return;
-      }
+  if (ordersError) {
+    throw normalizeQueryError(ordersError, {
+      baseCode: "MY_ORDERS_LOAD_FAILED",
+      fallbackMessage: "Не удалось загрузить историю заказов.",
+    });
+  }
 
-      setLoading(true);
-      setError(null);
+  const typedOrders = (orders ?? []) as DbOrder[];
+  if (typedOrders.length === 0) {
+    return {
+      items: [],
+      nextOffset: offset,
+    };
+  }
 
-      try {
-        const end = nextOffset + PAGE_SIZE - 1;
-        const { data: orders, error: ordersError } = await supabase
-          .from("orders")
-          .select("id,created_at,status,total,address,comment")
-          .eq("created_by", userId)
-          .order("created_at", { ascending: false })
-          .range(nextOffset, end);
+  const orderIds = typedOrders.map((order) => order.id);
+  const { data: itemsData, error: itemsError } = await supabase
+    .from("order_items")
+    .select("order_id,title,qty,price")
+    .in("order_id", orderIds)
+    .order("id", { ascending: true });
 
-        if (ordersError) {
-          setError({ message: ordersError.message, status: (ordersError as { status?: number }).status ?? null });
-          return;
-        }
+  if (itemsError) {
+    throw normalizeQueryError(itemsError, {
+      baseCode: "MY_ORDERS_LOAD_FAILED",
+      fallbackMessage: "Не удалось загрузить историю заказов.",
+    });
+  }
 
-        const typedOrders = (orders ?? []) as DbOrder[];
-        if (typedOrders.length === 0) {
-          setHasMore(false);
-          if (mode === "replace") {
-            setData([]);
-          }
-          return;
-        }
+  return {
+    items: typedOrders.map((order) => toMyOrder(order, (itemsData ?? []) as DbOrderItem[])),
+    nextOffset: offset + typedOrders.length,
+  };
+}
 
-        const orderIds = typedOrders.map((order) => order.id);
-        const { data: itemsData, error: itemsError } = await supabase
-          .from("order_items")
-          .select("order_id,title,qty,price")
-          .in("order_id", orderIds)
-          .order("id", { ascending: true });
+export function useMyOrders(userId?: string) {
+  const query = useInfiniteQuery<OrdersPage, QueryError, OrdersPage, ReturnType<typeof queryKeys.orders.my>, number>({
+    queryKey: queryKeys.orders.my(userId ?? "guest", 0),
+    queryFn: ({ pageParam = 0 }) => fetchMyOrdersPage(userId as string, pageParam),
+    enabled: Boolean(userId),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.items.length === PAGE_SIZE ? lastPage.nextOffset : undefined),
+    ...queryCachePolicy,
+  });
 
-        if (itemsError) {
-          setError({ message: itemsError.message, status: (itemsError as { status?: number }).status ?? null });
-          return;
-        }
-
-        const mapped = typedOrders.map((order) => toMyOrder(order, (itemsData ?? []) as DbOrderItem[]));
-
-        setData((prev) => (mode === "append" ? [...prev, ...mapped] : mapped));
-        setHasMore(typedOrders.length === PAGE_SIZE);
-        setOffset(nextOffset + typedOrders.length);
-      } catch (e) {
-        setError({
-          message: e instanceof Error ? e.message : "Не удалось загрузить историю заказов.",
-          status: null,
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [userId],
-  );
-
-  const reload = useCallback(async () => {
-    setOffset(0);
-    await loadPage(0, "replace");
-  }, [loadPage]);
-
-  const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
-    await loadPage(offset, "append");
-  }, [hasMore, loadPage, loading, offset]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return useMemo(
-    () => ({
-      data,
-      loading,
-      error,
-      hasMore,
-      loadMore,
-      reload,
-    }),
-    [data, error, hasMore, loadMore, loading, reload],
-  );
+  return {
+    data: query.data?.pages.flatMap((page) => page.items) ?? [],
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error ?? null,
+    hasNextPage: Boolean(query.hasNextPage),
+    fetchNextPage: query.fetchNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    refetch: query.refetch,
+  };
 }
