@@ -1,17 +1,45 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { supabase } from "../lib/supabase";
+import { queryKeys } from "../shared/queryKeys";
+import { CheckoutMutationError, createCheckoutOrder } from "../shared/repositories/checkoutRepository";
+import { selectCartLines, selectCartTotal } from "../store/cart.selectors";
 import { useAuthStore } from "../store/auth.store";
 import { useCartStore } from "../store/cart.store";
-import { selectCartLines, selectCartTotal } from "../store/cart.selectors";
 
 const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
 
+function createIdempotencyKey() {
+  return crypto.randomUUID();
+}
+
+function formatCheckoutError(error: unknown): string {
+  if (error instanceof CheckoutMutationError) {
+    if (error.code === "TIMEOUT" || error.code === "NETWORK_ERROR") {
+      return `Сеть нестабильна. Повторите попытку через пару секунд. Код: ${error.diagnosticCode}`;
+    }
+
+    if (error.code === "UNAUTHORIZED") {
+      return `Сессия истекла. Войдите снова и повторите. Код: ${error.diagnosticCode}`;
+    }
+
+    return `${error.message}. Код: ${error.diagnosticCode}`;
+  }
+
+  if (error instanceof Error) {
+    return `${error.message}.`;
+  }
+
+  return "Не удалось оформить заказ. Попробуйте снова.";
+}
+
 export function CheckoutPage() {
   const nav = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const session = useAuthStore((s) => s.session);
 
   const lines = useCartStore(selectCartLines);
   const total = useCartStore(selectCartTotal);
@@ -21,12 +49,55 @@ export function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [address, setAddress] = useState("");
   const [comment, setComment] = useState("");
-
-  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const createOrderMutation = useMutation({
+    mutationFn: async (idempotencyKey: string) => {
+      if (!session?.access_token) {
+        throw new CheckoutMutationError("Unauthorized", "UNAUTHORIZED", `CHK-${idempotencyKey.slice(0, 8).toUpperCase()}`);
+      }
+
+      return createCheckoutOrder({
+        total,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        address: address.trim(),
+        comment: comment.trim() || undefined,
+        items: lines.map((line) => ({
+          title: line.size ? `${line.title} (${line.size})` : line.title,
+          qty: line.qty,
+          price: line.price,
+        })),
+        idempotencyKey,
+        accessToken: session.access_token,
+      });
+    },
+    retry: (failureCount, error) => {
+      if (!(error instanceof CheckoutMutationError)) {
+        return false;
+      }
+
+      const isSafeRetry = error.code === "TIMEOUT" || error.code === "NETWORK_ERROR";
+      return isSafeRetry && failureCount < 1;
+    },
+    onSuccess: async ({ orderId }) => {
+      clear();
+
+      if (user?.id) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.my(user.id, 0).slice(0, 3),
+        });
+      }
+
+      nav(`/order/success/${orderId}`, { replace: true });
+    },
+    onError: (error) => {
+      setErrorMessage(formatCheckoutError(error));
+    },
+  });
+
   const canSubmit =
-    !submitting &&
+    !createOrderMutation.isPending &&
     lines.length > 0 &&
     customerName.trim().length > 1 &&
     phoneRegex.test(customerPhone.trim()) &&
@@ -40,45 +111,8 @@ export function CheckoutPage() {
       return;
     }
 
-    setSubmitting(true);
     setErrorMessage(null);
-
-    try {
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          created_by: user.id,
-          total,
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
-          address: address.trim(),
-          comment: comment.trim() || null,
-        })
-        .select("id")
-        .single();
-
-      if (orderError) throw orderError;
-      if (!order?.id) throw new Error("Не удалось получить ID заказа.");
-
-      const payload = lines.map((line) => ({
-        order_id: order.id,
-        title: line.size ? `${line.title} (${line.size})` : line.title,
-        qty: line.qty,
-        price: line.price,
-      }));
-
-      const { error: itemsError } = await supabase.from("order_items").insert(payload);
-      if (itemsError) throw itemsError;
-
-      clear();
-      nav(`/order/success/${order.id}`, { replace: true });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Не удалось оформить заказ. Попробуйте снова.";
-      setErrorMessage(message);
-    } finally {
-      setSubmitting(false);
-    }
+    await createOrderMutation.mutateAsync(createIdempotencyKey());
   }
 
   return (
@@ -119,10 +153,10 @@ export function CheckoutPage() {
         </div>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-2">
-          <Button onClick={onSubmit} disabled={!canSubmit}>
-            {submitting ? "Отправка..." : "Подтвердить"}
+          <Button onClick={onSubmit} disabled={!canSubmit || createOrderMutation.isPending}>
+            {createOrderMutation.isPending ? "Отправка..." : "Подтвердить"}
           </Button>
-          <Button variant="soft" onClick={() => nav(-1)} disabled={submitting}>
+          <Button variant="soft" onClick={() => nav(-1)} disabled={createOrderMutation.isPending}>
             Назад
           </Button>
         </div>
