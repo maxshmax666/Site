@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
     { key: "drinks", label: "Напитки" },
   ],
   saveError: null as DbError | null,
+  categoriesError: null as DbError | null,
   lastUpdatePayload: null as Record<string, unknown> | null,
 }));
 
@@ -51,7 +52,7 @@ const supabaseMock = vi.hoisted(() => ({
     if (table === "menu_categories") {
       return {
         select: vi.fn(() => ({
-          order: vi.fn(async () => ({ data: state.categories, error: null })),
+          order: vi.fn(async () => ({ data: state.categoriesError ? null : state.categories, error: state.categoriesError })),
         })),
       };
     }
@@ -77,6 +78,7 @@ vi.mock("../../shared/hooks/useSchemaPreflight", () => ({
 describe("AdminMenuPage", () => {
   beforeEach(() => {
     state.saveError = null;
+    state.categoriesError = null;
     state.lastUpdatePayload = null;
     supabaseMock.from.mockClear();
   });
@@ -105,5 +107,17 @@ describe("AdminMenuPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(await screen.findByText("Категория не поддерживается текущей схемой. Обновите категории меню или примените миграцию menu_category.")).toBeTruthy();
+  });
+
+  it("falls back to default categories without toast when menu_categories table is missing", async () => {
+    state.categoriesError = {
+      code: "PGRST205",
+      message: "Could not find the table 'public.menu_categories' in the schema cache",
+    };
+
+    render(<AdminMenuPage />);
+
+    await screen.findByText("Тестовая позиция");
+    expect(screen.queryByText("Could not find the table 'public.menu_categories' in the schema cache")).toBeNull();
   });
 });

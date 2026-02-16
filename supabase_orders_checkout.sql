@@ -2,6 +2,16 @@
 alter table public.orders
   add column if not exists client_request_key text;
 
+alter table public.orders
+  add column if not exists payment_method text not null default 'cash',
+  add column if not exists payment_code text;
+
+alter table public.orders
+  drop constraint if exists orders_payment_method_check;
+
+alter table public.orders
+  add constraint orders_payment_method_check check (payment_method in ('cash', 'sberbank_code'));
+
 create unique index if not exists orders_created_by_request_key_uidx
   on public.orders (created_by, client_request_key)
   where client_request_key is not null;
@@ -12,6 +22,8 @@ create or replace function public.create_order_with_items(
   p_customer_phone text,
   p_address text,
   p_comment text,
+  p_payment_method text,
+  p_payment_code text,
   p_items jsonb,
   p_idempotency_key text
 )
@@ -54,6 +66,8 @@ begin
     customer_phone,
     address,
     comment,
+    payment_method,
+    payment_code,
     client_request_key
   )
   values (
@@ -63,6 +77,11 @@ begin
     p_customer_phone,
     p_address,
     p_comment,
+    case when coalesce(nullif(trim(p_payment_method), ''), 'cash') in ('cash', 'sberbank_code')
+      then coalesce(nullif(trim(p_payment_method), ''), 'cash')
+      else 'cash'
+    end,
+    p_payment_code,
     p_idempotency_key
   )
   returning id into v_order_id;
@@ -89,4 +108,4 @@ begin
 end;
 $$;
 
-grant execute on function public.create_order_with_items(numeric, text, text, text, text, jsonb, text) to authenticated;
+grant execute on function public.create_order_with_items(numeric, text, text, text, text, text, text, jsonb, text) to authenticated;

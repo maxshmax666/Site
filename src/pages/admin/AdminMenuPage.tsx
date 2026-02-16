@@ -138,6 +138,22 @@ function isCategoryEnumError(error: { code?: string; message?: string } | null |
   return error.message.includes("menu_category");
 }
 
+function isMissingMenuCategoriesTable(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42P01" || error.code === "PGRST205") {
+    return true;
+  }
+
+  if (!error.message) {
+    return false;
+  }
+
+  return error.message.includes("Could not find the table 'public.menu_categories' in the schema cache");
+}
+
 function mapCategoryRows(rawRows: unknown[]): CategoryOption[] {
   const rows = rawRows
     .map((row) => row as Record<string, unknown>)
@@ -181,6 +197,9 @@ export function AdminMenuPage() {
 
     if (error) {
       setCategories(defaultMenuCategories.map((category) => ({ key: category.value, label: category.fullLabel })));
+      if (isMissingMenuCategoriesTable(error)) {
+        return;
+      }
       const schemaHint = error.code === "42703" || error.code === "42P01";
       setToast(schemaHint ? MENU_CATEGORIES_SCHEMA_MISMATCH_ERROR : getDbErrorMessage(error));
       return;

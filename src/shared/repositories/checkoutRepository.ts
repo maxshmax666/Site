@@ -12,6 +12,8 @@ export type CreateCheckoutOrderInput = {
   customerPhone: string;
   address: string;
   comment?: string;
+  paymentMethod: "cash" | "sberbank_code";
+  paymentCode?: string;
   items: CheckoutOrderItemInput[];
   idempotencyKey: string;
   accessToken: string;
@@ -80,6 +82,8 @@ export async function createCheckoutOrder(input: CreateCheckoutOrderInput): Prom
         customerPhone: input.customerPhone,
         address: input.address,
         comment: input.comment,
+        paymentMethod: input.paymentMethod,
+        paymentCode: input.paymentCode,
         items: input.items,
       }),
       signal: abortController.signal,
