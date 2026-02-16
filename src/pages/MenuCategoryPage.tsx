@@ -8,7 +8,7 @@ import { useMenuCategories } from "../shared/hooks/useMenuCategories";
 export function MenuCategoryPage() {
   const { category } = useParams<{ category: string }>();
   const { categories } = useMenuCategories();
-  const { items, loading, error, hasSupabaseEnv } = useMenuItems();
+  const { items, isPending, isError, error, hasSupabaseEnv } = useMenuItems();
 
   const currentCategory = useMemo(() => {
     if (!category || !isMenuCategory(category)) {
@@ -53,7 +53,7 @@ export function MenuCategoryPage() {
         <h1 className="relative text-3xl sm:text-4xl font-black">{currentCategory.fullLabel}</h1>
       </div>
 
-      {error && (
+      {isError && error && (
         <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
           Не удалось загрузить меню из базы данных. Показаны демо-данные.
         </div>
@@ -65,10 +65,10 @@ export function MenuCategoryPage() {
         </div>
       )}
 
-      {loading && <div className="mt-6 text-white/70">Загрузка меню…</div>}
+      {isPending && <div className="mt-6 text-white/70">Загрузка меню…</div>}
 
       <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {!loading && itemsForCategory.length === 0 && (
+        {!isPending && itemsForCategory.length === 0 && (
           <div className="text-white/60">В этой категории пока нет позиций.</div>
         )}
         {itemsForCategory.map((item) => (

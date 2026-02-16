@@ -15,12 +15,12 @@ export function PizzaPage() {
   const { id } = useParams();
   const nav = useNavigate();
   const add = useCartStore((s) => s.add);
-  const { items, loading } = useMenuItems();
+  const { items, isPending } = useMenuItems();
 
   const item = useMemo(() => items.find((x) => x.id === id), [items, id]);
   const [size, setSize] = useState<"S" | "M" | "L">("M");
 
-  if (loading) {
+  if (isPending) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="rounded-3xl p-6 bg-card border border-white/10 text-white/70">

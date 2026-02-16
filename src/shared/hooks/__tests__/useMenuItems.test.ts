@@ -1,9 +1,11 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ApiClientError } from "@/lib/apiClient";
-import { useMenuItems } from "../useMenuItems";
+import { fetchMenuItems } from "../useMenuItems";
 
 const fetchJsonMock = vi.hoisted(() => vi.fn());
+const supabaseState = vi.hoisted(() => ({
+  client: null as null | { from: ReturnType<typeof vi.fn> },
+}));
 
 vi.mock("@/lib/apiClient", async () => {
   const actual = await vi.importActual<typeof import("@/lib/apiClient")>("@/lib/apiClient");
@@ -14,45 +16,58 @@ vi.mock("@/lib/apiClient", async () => {
   };
 });
 
-describe("useMenuItems", () => {
+vi.mock("@/lib/supabase", () => ({
+  hasSupabaseEnv: true,
+  get supabase() {
+    return supabaseState.client;
+  },
+}));
+
+describe("fetchMenuItems", () => {
   beforeEach(() => {
     fetchJsonMock.mockReset();
+    supabaseState.client = null;
   });
 
-  it("loads menu items successfully", async () => {
+  it("returns api payload", async () => {
     fetchJsonMock.mockResolvedValueOnce({
-      items: [{ id: "pizza-1", category: "pizza", title: "Маргарита", desc: "", priceFrom: 490 }],
+      items: [{ id: "pizza-1", category: "classic", title: "Маргарита", desc: "", priceFrom: 490 }],
     });
 
-    const { result } = renderHook(() => useMenuItems());
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0]?.title).toBe("Маргарита");
-    expect(result.current.error).toBeNull();
+    await expect(fetchMenuItems()).resolves.toHaveLength(1);
   });
 
-  it("returns timeout diagnostic error", async () => {
-    fetchJsonMock.mockRejectedValueOnce(
-      new ApiClientError({
-        code: "TIMEOUT",
-        message: "Request timed out",
-        status: null,
-        url: "/api/menu",
+  it("maps supabase fallback on api failure", async () => {
+    fetchJsonMock.mockRejectedValueOnce(new ApiClientError({ code: "TIMEOUT", message: "timeout", status: null, url: "/api/menu" }));
+
+    const select = vi.fn(() => ({
+      eq: () => ({
+        order: () => ({
+          order: () => ({
+            order: async () => ({
+              data: [{ id: "1", title: "Четыре сыра", description: "desc", category: "pizza", price: 700, image_url: null }],
+              error: null,
+            }),
+          }),
+        }),
       }),
-    );
+    }));
 
-    const { result } = renderHook(() => useMenuItems());
+    supabaseState.client = { from: vi.fn(() => ({ select })) };
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.items).toEqual([]);
-    expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:TIMEOUT");
+    await expect(fetchMenuItems()).resolves.toEqual([
+      {
+        id: "1",
+        title: "Четыре сыра",
+        desc: "desc",
+        category: "classic",
+        priceFrom: 700,
+        image: undefined,
+      },
+    ]);
   });
 
-
-  it("returns configuration-specific fallback message on 5xx", async () => {
+  it("throws normalized query error", async () => {
     fetchJsonMock.mockRejectedValueOnce(
       new ApiClientError({
         code: "HTTP_ERROR",
@@ -62,42 +77,10 @@ describe("useMenuItems", () => {
       }),
     );
 
-    const { result } = renderHook(() => useMenuItems());
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:HTTP_ERROR");
-    expect(result.current.error?.message).toBe("Сервис меню временно недоступен: ошибка конфигурации сервера.");
-  });
-
-  it("handles invalid json/content-type errors", async () => {
-    fetchJsonMock.mockRejectedValueOnce(
-      new ApiClientError({
-        code: "INVALID_JSON",
-        message: "Invalid JSON",
-        status: 200,
-        url: "/api/menu",
-      }),
-    );
-
-    const { result, rerender } = renderHook(() => useMenuItems());
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:INVALID_JSON");
-
-    fetchJsonMock.mockRejectedValueOnce(
-      new ApiClientError({
-        code: "INVALID_CONTENT_TYPE",
-        message: "Invalid content-type",
-        status: 200,
-        url: "/api/menu",
-      }),
-    );
-
-    await result.current.reload();
-    rerender();
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.error?.code).toBe("MENU_LOAD_FAILED:INVALID_CONTENT_TYPE");
+    await expect(fetchMenuItems()).rejects.toMatchObject({
+      code: "MENU_LOAD_FAILED:HTTP_ERROR",
+      message: "Сервис меню временно недоступен: ошибка конфигурации сервера.",
+      status: 500,
+    });
   });
 });

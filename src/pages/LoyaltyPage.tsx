@@ -9,7 +9,7 @@ function pointsTone(value: number) {
 
 export function LoyaltyPage() {
   const user = useAuthStore((state) => state.user);
-  const { data, loading, error, reload } = useLoyaltyProgram(user?.id);
+  const { data, isPending, error, refetch } = useLoyaltyProgram(user?.id);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -29,8 +29,8 @@ export function LoyaltyPage() {
             <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4">
               <div className="text-sm text-amber-100">{error}</div>
               <div className="mt-4">
-                <Button variant="soft" onClick={() => void reload()} disabled={loading}>
-                  {loading ? "Повторяем..." : "Повторить"}
+                <Button variant="soft" onClick={() => void refetch()} disabled={isPending}>
+                  {isPending ? "Повторяем..." : "Повторить"}
                 </Button>
               </div>
             </div>
@@ -55,9 +55,9 @@ export function LoyaltyPage() {
         <div className="rounded-3xl p-6 bg-card border border-white/10 shadow-soft">
           <div className="text-xl font-bold">История операций</div>
 
-          {loading && <div className="mt-3 text-white/70">Загружаем операции...</div>}
+          {isPending && <div className="mt-3 text-white/70">Загружаем операции...</div>}
 
-          {!loading && !error && (data?.transactions.length ?? 0) === 0 && (
+          {!isPending && !error && (data?.transactions.length ?? 0) === 0 && (
             <div className="mt-3 text-white/70">Операций пока нет.</div>
           )}
 

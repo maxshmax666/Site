@@ -10,8 +10,8 @@ type MenuCatalogSectionProps = {
 };
 
 export function MenuCatalogSection({ title, description, className }: MenuCatalogSectionProps) {
-  const { categories, error: categoriesError } = useMenuCategories();
-  const { items, loading, error, hasSupabaseEnv } = useMenuItems();
+  const { categories, isPending: isCategoriesPending, isError: isCategoriesError, error: categoriesError, refetch: refetchCategories } = useMenuCategories();
+  const { items, isPending, isError, error, refetch, hasSupabaseEnv } = useMenuItems();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
@@ -82,17 +82,19 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
         ))}
       </div>
 
-      {error && (
+      {isError && error && (
         <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
           <div>{error.message}</div>
           <div className="mt-1 text-xs text-white/70">Код: {error.code}</div>
+          <button type="button" className="mt-2 text-xs underline" onClick={() => void refetch()}>Повторить</button>
         </div>
       )}
 
-      {categoriesError && (
+      {isCategoriesError && categoriesError && (
         <div className="mt-4 rounded-2xl p-3 bg-danger/15 border border-danger/30 text-sm text-white">
           <div>{categoriesError.message}</div>
           <div className="mt-1 text-xs text-white/70">Код: {categoriesError.code}</div>
+          <button type="button" className="mt-2 text-xs underline" onClick={() => void refetchCategories()}>Повторить</button>
         </div>
       )}
 
@@ -102,10 +104,10 @@ export function MenuCatalogSection({ title, description, className }: MenuCatalo
         </div>
       )}
 
-      {loading ? <div className="mt-6 text-white/70">Загрузка меню…</div> : null}
+      {(isPending || isCategoriesPending) ? <div className="mt-6 text-white/70">Загрузка меню…</div> : null}
 
       <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {!loading && filteredItems.length === 0 ? <div className="text-white/60">В этой категории пока нет позиций.</div> : null}
+        {!isPending && filteredItems.length === 0 ? <div className="text-white/60">В этой категории пока нет позиций.</div> : null}
         {filteredItems.map((item) => (
           <PizzaCard key={item.id} item={item} />
         ))}

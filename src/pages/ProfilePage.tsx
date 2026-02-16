@@ -37,7 +37,16 @@ export function ProfilePage() {
   const roleError = useAuthStore((s) => s.roleError);
 
   const currentTab = params.get("tab") === "orders" ? "orders" : "account";
-  const { data: orders, loading, error, hasMore, loadMore, reload } = useMyOrders(user?.id);
+  const {
+    data: orders,
+    isPending,
+    isError,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useMyOrders(user?.id);
   const isSessionExpired = error?.status === 401;
 
   const totalOrders = useMemo(() => orders.length, [orders.length]);
@@ -92,7 +101,7 @@ export function ProfilePage() {
               <div className="text-sm text-white/70">Всего загружено: {totalOrders}</div>
             </div>
 
-            {error && (
+            {isError && error && (
               <div className="mt-4 rounded-2xl border border-danger/30 bg-danger/15 p-4 text-sm text-white">
                 <div className="font-semibold">Ошибка загрузки заказов</div>
                 <div className="mt-1 text-white/80">
@@ -103,14 +112,14 @@ export function ProfilePage() {
                     Перейти ко входу
                   </Button>
                 ) : (
-                  <Button className="mt-3" size="sm" variant="soft" onClick={() => void reload()}>
+                  <Button className="mt-3" size="sm" variant="soft" onClick={() => void refetch()}>
                     Повторить
                   </Button>
                 )}
               </div>
             )}
 
-            {!error && orders.length === 0 && !loading && (
+            {!isError && orders.length === 0 && !isPending && (
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/80">
                 Заказов пока нет.
               </div>
@@ -155,12 +164,12 @@ export function ProfilePage() {
               ))}
             </div>
 
-            {hasMore && (
-              <Button className="mt-4" variant="soft" onClick={() => void loadMore()} disabled={loading}>
-                {loading ? "Загрузка..." : "Показать ещё"}
+            {hasNextPage && (
+              <Button className="mt-4" variant="soft" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? "Загрузка..." : "Показать ещё"}
               </Button>
             )}
-            {!hasMore && loading && <div className="mt-4 text-sm text-white/70">Загрузка...</div>}
+            {!hasNextPage && isPending && <div className="mt-4 text-sm text-white/70">Загрузка...</div>}
           </section>
         )}
       </div>
