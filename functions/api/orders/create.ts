@@ -13,8 +13,12 @@ type CreateOrderPayload = {
   customerPhone: string;
   address: string;
   comment?: string | null;
+  paymentMethod?: "cash" | "sberbank_code";
+  paymentCode?: string | null;
   items: CreateOrderItemPayload[];
 };
+
+const PAYMENT_METHODS = new Set(["cash", "sberbank_code"]);
 
 type ErrorBody = {
   code: string;
@@ -53,6 +57,14 @@ function validatePayload(payload: unknown): payload is CreateOrderPayload {
     typeof typedPayload.address !== "string" ||
     !Array.isArray(typedPayload.items)
   ) {
+    return false;
+  }
+
+  if (typedPayload.paymentMethod !== undefined && !PAYMENT_METHODS.has(typedPayload.paymentMethod)) {
+    return false;
+  }
+
+  if (typedPayload.paymentCode !== undefined && typedPayload.paymentCode !== null && typeof typedPayload.paymentCode !== "string") {
     return false;
   }
 
@@ -118,13 +130,18 @@ export const onRequest: PagesFunction<ApiEnv> = async ({ request, env }) => {
     },
   });
 
-  const { total, customerName, customerPhone, address, comment, items } = payload;
+  const { total, customerName, customerPhone, address, comment, paymentMethod, paymentCode, items } = payload;
+  const normalizedPaymentMethod = paymentMethod && PAYMENT_METHODS.has(paymentMethod) ? paymentMethod : "cash";
+  const normalizedPaymentCode = normalizedPaymentMethod === "sberbank_code" ? paymentCode?.trim() || null : null;
+
   const { data: orderId, error } = await supabase.rpc("create_order_with_items", {
     p_total: total,
     p_customer_name: customerName.trim(),
     p_customer_phone: customerPhone.trim(),
     p_address: address.trim(),
     p_comment: comment?.trim() || null,
+    p_payment_method: normalizedPaymentMethod,
+    p_payment_code: normalizedPaymentCode,
     p_items: items,
     p_idempotency_key: idempotencyKey,
   });

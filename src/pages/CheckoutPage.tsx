@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { createSberbankPaymentCode } from "../shared/payments/sberCode";
 import { queryKeys } from "../shared/queryKeys";
 import { CheckoutMutationError, createCheckoutOrder } from "../shared/repositories/checkoutRepository";
 import { selectCartLines, selectCartTotal } from "../store/cart.selectors";
@@ -49,7 +50,10 @@ export function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [address, setAddress] = useState("");
   const [comment, setComment] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "sberbank_code">("cash");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const sberbankPaymentCode = createSberbankPaymentCode(total);
 
   const createOrderMutation = useMutation({
     mutationFn: async (idempotencyKey: string) => {
@@ -63,6 +67,8 @@ export function CheckoutPage() {
         customerPhone: customerPhone.trim(),
         address: address.trim(),
         comment: comment.trim() || undefined,
+        paymentMethod,
+        paymentCode: paymentMethod === "sberbank_code" ? sberbankPaymentCode : undefined,
         items: lines.map((line) => ({
           title: line.size ? `${line.title} (${line.size})` : line.title,
           qty: line.qty,
@@ -139,6 +145,33 @@ export function CheckoutPage() {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <div className="text-sm text-white/70">Способ оплаты</div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              variant={paymentMethod === "cash" ? "primary" : "soft"}
+              onClick={() => setPaymentMethod("cash")}
+              disabled={createOrderMutation.isPending}
+            >
+              Наличными при получении
+            </Button>
+            <Button
+              variant={paymentMethod === "sberbank_code" ? "primary" : "soft"}
+              onClick={() => setPaymentMethod("sberbank_code")}
+              disabled={createOrderMutation.isPending}
+            >
+              Безнал (код Сбербанк)
+            </Button>
+          </div>
+
+          {paymentMethod === "sberbank_code" && (
+            <div className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+              <div className="text-emerald-100/90">Код оплаты сформирован по сумме заказа:</div>
+              <div className="mt-1 break-all font-mono text-xs sm:text-sm">{sberbankPaymentCode}</div>
+            </div>
+          )}
         </div>
 
         {errorMessage && (
