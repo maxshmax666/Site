@@ -1,14 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { useCartStore } from "../store/cart.store";
+import { selectCartLines, selectCartTotal } from "../store/cart.selectors";
 
 export function CartPage() {
   const nav = useNavigate();
-  const lines = useCartStore((s) => s.lines);
+  const lines = useCartStore(selectCartLines);
   const inc = useCartStore((s) => s.inc);
   const dec = useCartStore((s) => s.dec);
   const remove = useCartStore((s) => s.remove);
-  const total = useCartStore((s) => s.total());
+  const total = useCartStore(selectCartTotal);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">

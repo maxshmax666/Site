@@ -5,6 +5,7 @@ import { Input } from "../components/ui/Input";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/auth.store";
 import { useCartStore } from "../store/cart.store";
+import { selectCartLines, selectCartTotal } from "../store/cart.selectors";
 
 const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
 
@@ -12,8 +13,8 @@ export function CheckoutPage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
 
-  const lines = useCartStore((s) => s.lines);
-  const total = useCartStore((s) => s.total());
+  const lines = useCartStore(selectCartLines);
+  const total = useCartStore(selectCartTotal);
   const clear = useCartStore((s) => s.clear);
 
   const [customerName, setCustomerName] = useState("");
