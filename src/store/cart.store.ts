@@ -10,15 +10,13 @@ export type CartLine = {
   size?: "S" | "M" | "L";
 };
 
-type CartState = {
+export type CartState = {
   lines: CartLine[];
   add: (item: MenuItem, opts?: { size?: CartLine["size"]; price?: number }) => void;
   dec: (id: string, size?: CartLine["size"]) => void;
   inc: (id: string, size?: CartLine["size"]) => void;
   remove: (id: string, size?: CartLine["size"]) => void;
   clear: () => void;
-  total: () => number;
-  count: () => number;
 };
 
 function keyOf(id: string, size?: CartLine["size"]) {
@@ -27,7 +25,7 @@ function keyOf(id: string, size?: CartLine["size"]) {
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       lines: [],
       add: (item, opts) => {
         const size = opts?.size ?? "M";
@@ -37,7 +35,11 @@ export const useCartStore = create<CartState>()(
           const idx = s.lines.findIndex((l) => keyOf(l.id, l.size) === k);
           if (idx >= 0) {
             const next = s.lines.slice();
-            next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
+            const line = next[idx];
+            if (!line) {
+              return { lines: next };
+            }
+            next[idx] = { ...line, qty: line.qty + 1 };
             return { lines: next };
           }
           return { lines: [...s.lines, { id: item.id, title: item.title, price, qty: 1, size }] };
@@ -63,8 +65,6 @@ export const useCartStore = create<CartState>()(
         set((s) => ({ lines: s.lines.filter((l) => keyOf(l.id, l.size) !== k) }));
       },
       clear: () => set({ lines: [] }),
-      total: () => get().lines.reduce((sum, l) => sum + l.price * l.qty, 0),
-      count: () => get().lines.reduce((sum, l) => sum + l.qty, 0),
     }),
     { name: "pizza-tagil-cart-v1" }
   )

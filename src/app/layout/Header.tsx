@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/cart.store";
+import { selectCartCount } from "../../store/cart.selectors";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { hasRole, type Role } from "../../lib/roles";
@@ -17,7 +18,7 @@ const nav = [
 export function Header() {
   const navigate = useNavigate();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const count = useCartStore((s) => s.count());
+  const count = useCartStore(selectCartCount);
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
   const signOut = useAuthStore((s) => s.signOut);
