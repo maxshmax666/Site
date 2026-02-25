@@ -5,6 +5,7 @@ import { selectCartCount } from "../../store/cart.selectors";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { hasRole, type Role } from "../../lib/roles";
+import { scrollToMenuSection } from "../../shared/scrollToMenu";
 
 const nav = [
   { to: "/", label: "Главная" },
@@ -41,10 +42,11 @@ export function Header() {
       if (location.pathname === "/") {
         event.preventDefault();
         window.history.replaceState(null, "", "/#menu");
-        document.getElementById("menu")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+
+        if (!scrollToMenuSection("smooth")) {
+          navigate("/#menu");
+        }
+
         return;
       }
 

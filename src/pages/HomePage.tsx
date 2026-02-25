@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Hero } from "../components/sections/Hero";
 import { MenuCatalogSection } from "../components/sections/MenuCatalogSection";
+import { scrollToMenuSection } from "../shared/scrollToMenu";
 
 export function HomePage() {
   const location = useLocation();
@@ -11,29 +11,31 @@ export function HomePage() {
       return;
     }
 
-    const scrollToMenu = () => {
-      document.getElementById("menu")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    let timeoutId: number | undefined;
+
+    const tryScroll = (attempt: number) => {
+      const isScrolled = scrollToMenuSection("smooth");
+
+      if (isScrolled || attempt >= 5) {
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => tryScroll(attempt + 1), 120);
     };
 
-    const rafId = requestAnimationFrame(scrollToMenu);
-    const timeoutId = window.setTimeout(scrollToMenu, 120);
+    const rafId = requestAnimationFrame(() => tryScroll(0));
 
     return () => {
       cancelAnimationFrame(rafId);
-      window.clearTimeout(timeoutId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [location.hash]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
-      <section className="mt-10">
-        <Hero />
-      </section>
-
-      <div id="menu" className="mt-10 scroll-mt-24">
+      <div id="menu" className="scroll-mt-24">
         <MenuCatalogSection
           title="Меню на любой вкус"
           description="Выберите категорию и добавляйте любимые позиции в корзину — от классики до авторских сочетаний."
