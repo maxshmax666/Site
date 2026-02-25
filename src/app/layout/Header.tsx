@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { type MouseEvent, useCallback, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/cart.store";
 import { selectCartCount } from "../../store/cart.selectors";
 import { cn } from "../../lib/cn";
@@ -9,7 +8,7 @@ import { hasRole, type Role } from "../../lib/roles";
 
 const nav = [
   { to: "/", label: "Главная" },
-  { to: "/menu", label: "Меню" },
+  { to: "/#menu", label: "Меню" },
   { to: "/loyalty", label: "Лояльность" },
   { to: "/catering", label: "Кейтеринг" },
   { to: "/contacts", label: "Контакты" },
@@ -17,6 +16,7 @@ const nav = [
 
 export function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const count = useCartStore(selectCartCount);
   const user = useAuthStore((s) => s.user);
@@ -34,6 +34,25 @@ export function Header() {
     }
   }
 
+  const handleMenuNavigation = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      setMobileNavOpen(false);
+
+      if (location.pathname === "/") {
+        event.preventDefault();
+        window.history.replaceState(null, "", "/#menu");
+        document.getElementById("menu")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        return;
+      }
+
+      navigate("/#menu");
+    },
+    [location.pathname, navigate]
+  );
+
   return (
     <header className="sticky top-0 z-[40] backdrop-blur bg-bg/75 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -48,6 +67,7 @@ export function Header() {
             <NavLink
               key={x.to}
               to={x.to}
+              onClick={x.label === "Меню" ? handleMenuNavigation : undefined}
               className={({ isActive }) =>
                 cn(
                   "px-3 py-2 rounded-xl text-sm transition",
@@ -132,7 +152,11 @@ export function Header() {
             <NavLink
               key={x.to}
               to={x.to}
-              onClick={() => setMobileNavOpen(false)}
+              onClick={
+                x.label === "Меню"
+                  ? handleMenuNavigation
+                  : () => setMobileNavOpen(false)
+              }
               className={({ isActive }) =>
                 cn(
                   "px-3 py-2 rounded-xl text-sm transition",
