@@ -4,9 +4,16 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { hasSupabaseEnv, supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/auth.store";
+import type { Role } from "../lib/roles";
+
+const STAFF_ROLES: ReadonlySet<Role> = new Set(["admin", "engineer", "manager"]);
+
+function getPostLoginRoute(role: Role) {
+  return STAFF_ROLES.has(role) ? "/admin/orders" : "/profile";
+}
 
 function prettifyError(e: unknown) {
-  const msg = typeof e === "object" && e && "message" in e ? String((e as any).message) : String(e);
+  const msg = typeof e === "object" && e && "message" in e ? String((e as { message?: string }).message) : String(e);
   // Supabase часто возвращает англ. сообщения — оставим как есть, но можно улучшать позже
   return msg;
 }
@@ -15,6 +22,7 @@ export function LoginPage() {
   const nav = useNavigate();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const role = useAuthStore((s) => s.role);
   const roleError = useAuthStore((s) => s.roleError);
   const syncSessionFromSupabase = useAuthStore((s) => s.syncSessionFromSupabase);
 
@@ -49,9 +57,9 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      nav("/profile");
+      nav(getPostLoginRoute(role));
     }
-  }, [loading, nav, user]);
+  }, [loading, nav, role, user]);
 
   if (!loading && user) {
     // уже залогинен
@@ -96,7 +104,8 @@ export function LoginPage() {
           } catch (sessionSyncError) {
             setSyncError(prettifyError(sessionSyncError));
           }
-          nav("/profile", { replace: true });
+          const syncedRole = useAuthStore.getState().role;
+          nav(getPostLoginRoute(syncedRole), { replace: true });
           return;
         }
 

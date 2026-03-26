@@ -23,6 +23,14 @@ function formatRoleError(error: { code?: string; message?: string }) {
   return formatSupabaseError(error, "Не удалось прочитать роль из profiles.");
 }
 
+function isRlsReadError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false;
+  if (error.code === "42501") return true;
+
+  const message = (error.message ?? "").toLowerCase();
+  return message.includes("row-level security") || message.includes("permission denied") || message.includes("policy");
+}
+
 let authSubscriptionCleanup: (() => void) | null = null;
 
 async function fetchRole(): Promise<{ role: Role; error: string | null }> {
@@ -47,6 +55,22 @@ async function fetchRole(): Promise<{ role: Role; error: string | null }> {
     .maybeSingle();
 
   if (error) {
+    if (isRlsReadError(error)) {
+      const { data: rpcRole, error: rpcError } = await supabase.rpc("current_role_unrestricted");
+
+      if (!rpcError && rpcRole) {
+        return {
+          role: rpcRole as Role,
+          error: "Нет прав чтения public.profiles (RLS). Роль определена через current_role_unrestricted().",
+        };
+      }
+
+      return {
+        role: "guest",
+        error: `Нет прав чтения public.profiles (RLS), fallback current_role_unrestricted() не сработал: ${formatRoleError(rpcError ?? error)}`,
+      };
+    }
+
     return { role: "guest", error: formatRoleError(error) };
   }
   if (!data) {
@@ -54,7 +78,11 @@ async function fetchRole(): Promise<{ role: Role; error: string | null }> {
       "profiles row is missing for authenticated user, using guest role. Run backfill/trigger from supabase_admin.sql.",
       { userId },
     );
-    return { role: "guest", error: null };
+    return {
+      role: "guest",
+      error:
+        "Для пользователя нет строки в public.profiles. Нужен backfill/trigger из supabase_admin.sql или ручное создание профиля.",
+    };
   }
 
   return { role: (data?.role as Role) ?? "guest", error: null };

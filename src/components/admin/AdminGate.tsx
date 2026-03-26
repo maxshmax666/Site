@@ -27,6 +27,12 @@ export function AdminGate({
   }
 
   if (roleError) {
+    const details = [
+      "нет профиля в public.profiles",
+      "нет прав чтения public.profiles (RLS)",
+      role === "guest" ? "эффективная роль: guest" : `эффективная роль: ${role}`,
+    ];
+
     return (
       <div className="max-w-3xl mx-auto mt-6">
         <Toast
@@ -37,6 +43,9 @@ export function AdminGate({
               Ошибка чтения <code>public.profiles</code>: <b>{roleError}</b>
               <div className="mt-2 text-white/70">
                 Проверь backfill/триггер в <code>supabase_admin.sql</code> и RLS-политики для таблицы профилей.
+              </div>
+              <div className="mt-2 text-white/70">
+                Возможные причины: {details.join(" / ")}.
               </div>
             </>
           )}

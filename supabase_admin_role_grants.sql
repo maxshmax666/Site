@@ -41,6 +41,10 @@ select
 
 -- 2) Verification: expect at least one row with role = admin for intended user.
 -- select user_id, email, role from public.profiles
+-- where email = '<admin-email>';
+--
+-- Optional strict check by UUID/email placeholders:
+-- select user_id, email, role from public.profiles
 -- where user_id = '00000000-0000-0000-0000-000000000000'::uuid
 --    or email = 'change-me-admin@example.com';
 
