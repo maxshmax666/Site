@@ -130,6 +130,17 @@ curl -i https://tagil.pizza/api/auth/me
 
 После применения `supabase_admin.sql` назначение первой admin-роли выполняется **отдельно вручную** через `supabase_admin_role_grants.sql`.
 
+Короткий runbook (в указанном порядке):
+1. Примените базовый SQL: `psql "$SUPABASE_DB_URL" -f supabase_admin.sql` (backfill + trigger для `public.profiles`).
+2. Откройте `supabase_admin_role_grants.sql` в SQL Editor, подставьте реальные `target_email` и `target_user_id` в CTE `params`, затем выполните скрипт.
+3. Проверьте результат вручную:
+   ```sql
+   select user_id, email, role
+   from public.profiles
+   where email = '<admin-email>';
+   ```
+   Ожидаемо: одна строка с `role = 'admin'`.
+
 ⚠️ Важно по безопасности:
 - не храните реальные production email/UUID в репозитории;
 - перед запуском оператор должен вручную подставить целевые `email`/`user_id` в CTE `params`.

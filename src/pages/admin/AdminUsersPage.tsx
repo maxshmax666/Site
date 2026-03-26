@@ -21,6 +21,12 @@ export function AdminUsersPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
+    if (!supabase) {
+      setErr("Supabase не настроен: страница управления пользователями недоступна в демо-режиме.");
+      setRows([]);
+      return;
+    }
+
     setErr(null);
     const { data, error } = await supabase
       .from("profiles")
@@ -33,6 +39,11 @@ export function AdminUsersPage() {
   }
 
   async function setRole(user_id: string, role: Role) {
+    if (!supabase) {
+      setToast("Supabase не настроен: изменение ролей недоступно в демо-режиме.");
+      return;
+    }
+
     const { error } = await supabase.from("profiles").update({ role }).eq("user_id", user_id);
     if (error) {
       setToast(formatSupabaseError(error));
@@ -47,6 +58,12 @@ export function AdminUsersPage() {
 
   return (
     <div>
+      {!supabase ? (
+        <div className="mb-4 p-3 rounded-2xl bg-warning/15 border border-warning/30 text-sm text-white">
+          Supabase-клиент не инициализирован. В демо-конфиге список пользователей и управление ролями отключены.
+        </div>
+      ) : null}
+
       {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
 
       <div className="flex items-center justify-between gap-2">
