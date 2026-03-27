@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false --noEmit",
     "schema:check": "node scripts/schema-check.mjs",
-    "cf:pages:runtime-env": "node scripts/cloudflare-pages-runtime-env.mjs"
+    "cf:pages:runtime-env": "node scripts/cloudflare-pages-runtime-env.mjs",
+    "test:zonesmoke": "vitest run src/shared/hooks/__tests__/deliveryZones.greenZone.smoke.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",

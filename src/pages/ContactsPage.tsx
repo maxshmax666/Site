@@ -11,6 +11,11 @@ function fallbackMessage(error: string | null) {
   return `Карта временно недоступна: ${error}`;
 }
 
+function getZoneHint(zoneName: string): string | null {
+  if (zoneName === "Зелёная зона") return "до 10 минут пешком";
+  return null;
+}
+
 export function ContactsPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<GoogleMapAdapter | null>(null);
@@ -113,6 +118,23 @@ export function ContactsPage() {
               </div>
             </div>
           )}
+          {!loading && zones.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              {zones.map((zone) => (
+                <div key={zone.id} className="flex items-center gap-2 text-sm text-white/80">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: zone.color }}
+                    aria-hidden
+                  />
+                  <span className="font-medium">{zone.name}</span>
+                  {getZoneHint(zone.name) ? (
+                    <span className="text-white/60">({getZoneHint(zone.name)})</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
