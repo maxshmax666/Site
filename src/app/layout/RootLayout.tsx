@@ -1,15 +1,18 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 
 export function RootLayout() {
+  const location = useLocation();
+  const isShowcaseHome = location.pathname === "/";
+
   return (
     <div className="min-h-full flex flex-col">
-      <Header />
+      {!isShowcaseHome ? <Header /> : null}
       <main className="flex-1">
         <Outlet />
       </main>
-      <Footer />
+      {!isShowcaseHome ? <Footer /> : null}
     </div>
   );
 }
