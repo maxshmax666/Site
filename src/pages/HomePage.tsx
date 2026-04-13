@@ -82,6 +82,7 @@ export function HomePage() {
   };
 
   const categoryTabs = categories.slice(0, 8);
+  const sidebarLinks = mainNav;
 
   const handleMenuNavigation = useCallback(
     (event: MouseEvent<HTMLAnchorElement>, shouldCloseDrawer = false) => {
@@ -103,6 +104,19 @@ export function HomePage() {
       navigate("/#menu");
     },
     [location.pathname, navigate]
+  );
+
+  const handleSidebarItemClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, to: string, shouldCloseDrawer = false) => {
+      if (shouldCloseDrawer) {
+        setDrawerOpen(false);
+      }
+
+      if (to === "/#menu") {
+        handleMenuNavigation(event, shouldCloseDrawer);
+      }
+    },
+    [handleMenuNavigation]
   );
 
   return (
@@ -127,11 +141,11 @@ export function HomePage() {
               </div>
             </div>
             <div className="mt-6 space-y-2">
-              {mainNav.map((item) => (
+              {sidebarLinks.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  onClick={item.label === "Меню" ? handleMenuNavigation : undefined}
+                  onClick={(event) => handleSidebarItemClick(event, item.to)}
                   className={({ isActive }) => `flex w-full items-center gap-3 rounded-[14px] border px-4 py-3 text-left text-[16px] transition ${
                     isActive
                       ? "border-[#FF6A00]/50 bg-[linear-gradient(90deg,rgba(255,106,0,0.16)_0%,rgba(20,20,20,0.92)_100%)] text-[#FF6A00] shadow-[0_8px_24px_rgba(255,106,0,0.2)]"
@@ -336,15 +350,11 @@ export function HomePage() {
               </div>
             </div>
             <div className="mt-4 space-y-2">
-              {mainNav.map((item) => (
+              {sidebarLinks.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  onClick={
-                    item.label === "Меню"
-                      ? (event) => handleMenuNavigation(event, true)
-                      : () => setDrawerOpen(false)
-                  }
+                  onClick={(event) => handleSidebarItemClick(event, item.to, true)}
                   className={({ isActive }) => `flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[18px] ${
                     isActive ? "border border-[#FF6A00]/40 text-[#FF6A00]" : "text-[#A1A1A1]"
                   }`}
