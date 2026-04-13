@@ -1,17 +1,11 @@
-import { useMemo, useState, type TouchEvent } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useMemo, useState, type MouseEvent, type TouchEvent } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/cart.store";
 import { selectCartCount, selectCartTotal } from "../store/cart.selectors";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
 import { useMenuCategories } from "../shared/hooks/useMenuCategories";
-
-const sidebarLinks = [
-  { key: "home", label: "Главная", active: true },
-  { key: "menu", label: "Меню", active: false },
-  { key: "promo", label: "Акции", active: false },
-  { key: "orders", label: "Заказы", active: false },
-  { key: "contacts", label: "Контакты", active: false },
-] as const;
+import { scrollToMenuSection } from "../shared/scrollToMenu";
+import { mainNav } from "../shared/navigation/mainNav";
 
 const sliderItems = [
   {
@@ -54,6 +48,8 @@ export function HomePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const { items } = useMenuItems();
   const { categories } = useMenuCategories();
@@ -87,6 +83,28 @@ export function HomePage() {
 
   const categoryTabs = categories.slice(0, 8);
 
+  const handleMenuNavigation = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, shouldCloseDrawer = false) => {
+      if (shouldCloseDrawer) {
+        setDrawerOpen(false);
+      }
+
+      if (location.pathname === "/") {
+        event.preventDefault();
+        window.history.replaceState(null, "", "/#menu");
+
+        if (!scrollToMenuSection("smooth")) {
+          navigate("/#menu");
+        }
+
+        return;
+      }
+
+      navigate("/#menu");
+    },
+    [location.pathname, navigate]
+  );
+
   return (
     <div className="min-h-screen bg-[#08090B] text-white font-['Inter',system-ui,sans-serif]">
       <div className="mx-auto w-full max-w-[1280px] lg:px-4">
@@ -109,19 +127,20 @@ export function HomePage() {
               </div>
             </div>
             <div className="mt-6 space-y-2">
-              {sidebarLinks.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={`flex w-full items-center gap-3 rounded-[14px] border px-4 py-3 text-left text-[16px] transition ${
-                    item.active
+              {mainNav.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={item.label === "Меню" ? handleMenuNavigation : undefined}
+                  className={({ isActive }) => `flex w-full items-center gap-3 rounded-[14px] border px-4 py-3 text-left text-[16px] transition ${
+                    isActive
                       ? "border-[#FF6A00]/50 bg-[linear-gradient(90deg,rgba(255,106,0,0.16)_0%,rgba(20,20,20,0.92)_100%)] text-[#FF6A00] shadow-[0_8px_24px_rgba(255,106,0,0.2)]"
                       : "border-transparent bg-transparent text-[#A1A1A1] hover:bg-[#131313]"
                   }`}
                 >
                   <span className="h-2 w-2 rounded-full bg-current" />
                   {item.label}
-                </button>
+                </NavLink>
               ))}
             </div>
             <div className="mt-auto rounded-[20px] border border-[#2B4B2C] bg-[radial-gradient(circle_at_0%_0%,rgba(82,196,26,0.22),transparent_45%),linear-gradient(140deg,#12301B_0%,#271A12_100%)] p-4 shadow-[0_14px_32px_rgba(0,0,0,0.45)]">
@@ -317,11 +336,22 @@ export function HomePage() {
               </div>
             </div>
             <div className="mt-4 space-y-2">
-              {sidebarLinks.map((item) => (
-                <button key={item.key} type="button" className={`flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[18px] ${item.active ? "border border-[#FF6A00]/40 text-[#FF6A00]" : "text-[#A1A1A1]"}`}>
+              {mainNav.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={
+                    item.label === "Меню"
+                      ? (event) => handleMenuNavigation(event, true)
+                      : () => setDrawerOpen(false)
+                  }
+                  className={({ isActive }) => `flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[18px] ${
+                    isActive ? "border border-[#FF6A00]/40 text-[#FF6A00]" : "text-[#A1A1A1]"
+                  }`}
+                >
                   <span className="h-2 w-2 rounded-full bg-current" />
                   {item.label}
-                </button>
+                </NavLink>
               ))}
             </div>
             <div className="mt-6 rounded-[20px] border border-[#2B4B2C] bg-[radial-gradient(circle_at_0%_0%,rgba(82,196,26,0.24),transparent_40%),linear-gradient(140deg,#12301B_0%,#271A12_100%)] p-4 shadow-[0_14px_30px_rgba(0,0,0,0.45)]">
