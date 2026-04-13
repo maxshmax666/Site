@@ -6,14 +6,7 @@ import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { hasRole, type Role } from "../../lib/roles";
 import { scrollToMenuSection } from "../../shared/scrollToMenu";
-
-const nav = [
-  { to: "/", label: "Главная" },
-  { to: "/#menu", label: "Меню" },
-  { to: "/loyalty", label: "Лояльность" },
-  { to: "/catering", label: "Кейтеринг" },
-  { to: "/contacts", label: "Контакты" },
-];
+import { mainNav } from "../../shared/navigation/mainNav";
 
 export function Header() {
   const navigate = useNavigate();
@@ -65,7 +58,7 @@ export function Header() {
         </NavLink>
 
         <nav className="hidden md:flex items-center gap-1 ml-2">
-          {nav.map((x) => (
+          {mainNav.map((x) => (
             <NavLink
               key={x.to}
               to={x.to}
@@ -150,7 +143,7 @@ export function Header() {
 
       {mobileNavOpen && (
         <nav id="mobile-nav" className="md:hidden border-t border-white/10 px-4 py-3 flex flex-col gap-1">
-          {nav.map((x) => (
+          {mainNav.map((x) => (
             <NavLink
               key={x.to}
               to={x.to}
