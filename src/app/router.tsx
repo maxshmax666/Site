@@ -23,19 +23,20 @@ import { AdminKitchenPage } from "../pages/admin/AdminKitchenPage";
 import { AdminCouriersPage } from "../pages/admin/AdminCouriersPage";
 import { AdminUsersPage } from "../pages/admin/AdminUsersPage";
 import { AdminMenuPage } from "../pages/admin/AdminMenuPage";
+import { routes } from "../shared/navigation/mainNav";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
+    path: routes.home,
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "menu", element: <MenuPage /> },
+      { path: routes.menu.slice(1), element: <MenuPage /> },
       { path: "menu/:category", element: <MenuCategoryPage /> },
       { path: "pizza/:id", element: <PizzaPage /> },
-      { path: "cart", element: <CartPage /> },
+      { path: routes.cart.slice(1), element: <CartPage /> },
       {
-        path: "checkout",
+        path: routes.checkout.slice(1),
         element: (
           <AuthGate>
             <CheckoutPage />
@@ -50,23 +51,23 @@ export const router = createBrowserRouter([
           </AuthGate>
         ),
       },
-      { path: "login", element: <LoginPage /> },
-      { path: "reset-password", element: <ResetPasswordPage /> },
+      { path: routes.login.slice(1), element: <LoginPage /> },
+      { path: routes.resetPassword.slice(1), element: <ResetPasswordPage /> },
       {
-        path: "profile",
+        path: routes.profile.slice(1),
         element: (
           <AuthGate>
             <ProfilePage />
           </AuthGate>
         ),
       },
-      { path: "catering", element: <CateringPage /> },
-      { path: "contacts", element: <ContactsPage /> },
-      { path: "loyalty", element: <LoyaltyPage /> },
+      { path: routes.catering.slice(1), element: <CateringPage /> },
+      { path: routes.contacts.slice(1), element: <ContactsPage /> },
+      { path: routes.loyalty.slice(1), element: <LoyaltyPage /> },
 
       // ADMIN (мин. роль engineer+)
       {
-        path: "admin",
+        path: routes.admin.slice(1),
         element: (
           <AdminGate minRole="engineer">
             <AdminLayout />

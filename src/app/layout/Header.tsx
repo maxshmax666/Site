@@ -1,16 +1,15 @@
-import { type MouseEvent, useCallback, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/cart.store";
 import { selectCartCount } from "../../store/cart.selectors";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { hasRole, type Role } from "../../lib/roles";
-import { scrollToMenuSection } from "../../shared/scrollToMenu";
-import { mainNav } from "../../shared/navigation/mainNav";
+import { mainNav, routes } from "../../shared/navigation/mainNav";
+import { useMenuNavigation } from "../../shared/navigation/useMenuNavigation";
 
 export function Header() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const count = useCartStore(selectCartCount);
   const user = useAuthStore((s) => s.user);
@@ -28,25 +27,9 @@ export function Header() {
     }
   }
 
-  const handleMenuNavigation = useCallback(
-    (event: MouseEvent<HTMLAnchorElement>) => {
-      setMobileNavOpen(false);
-
-      if (location.pathname === "/") {
-        event.preventDefault();
-        window.history.replaceState(null, "", "/#menu");
-
-        if (!scrollToMenuSection("smooth")) {
-          navigate("/#menu");
-        }
-
-        return;
-      }
-
-      navigate("/#menu");
-    },
-    [location.pathname, navigate]
-  );
+  const handleMenuNavigation = useMenuNavigation({
+    onNavigateStart: () => setMobileNavOpen(false),
+  });
 
   return (
     <header className="sticky top-0 z-[40] backdrop-blur bg-bg/75 border-b border-white/10">
@@ -76,7 +59,7 @@ export function Header() {
 
           {showAdmin && (
             <NavLink
-              to="/admin"
+              to={routes.admin}
               className={({ isActive }) =>
                 cn(
                   "px-3 py-2 rounded-xl text-sm transition",
@@ -102,7 +85,7 @@ export function Header() {
         <div className="ml-auto flex items-center gap-2">
           {user === null ? (
             <NavLink
-              to="/login"
+              to={routes.login}
               onClick={() => setMobileNavOpen(false)}
               className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
             >
@@ -111,7 +94,7 @@ export function Header() {
           ) : (
             <>
               <NavLink
-                to="/profile"
+                to={routes.profile}
                 onClick={() => setMobileNavOpen(false)}
                 className="px-3 py-2 rounded-xl text-sm hover:bg-white/5 text-white/85"
               >
@@ -127,7 +110,7 @@ export function Header() {
             </>
           )}
           <NavLink
-            to="/cart"
+            to={routes.cart}
             onClick={() => setMobileNavOpen(false)}
             className="relative px-4 py-2 rounded-xl text-sm bg-orange text-black font-semibold hover:opacity-90"
           >
@@ -165,7 +148,7 @@ export function Header() {
 
           {showAdmin && (
             <NavLink
-              to="/admin"
+              to={routes.admin}
               onClick={() => setMobileNavOpen(false)}
               className={({ isActive }) =>
                 cn(

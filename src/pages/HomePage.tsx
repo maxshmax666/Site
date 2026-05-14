@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState, type MouseEvent, type TouchEvent } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useCartStore } from "../store/cart.store";
 import { selectCartCount, selectCartTotal } from "../store/cart.selectors";
 import { useMenuItems } from "../shared/hooks/useMenuItems";
 import { useMenuCategories } from "../shared/hooks/useMenuCategories";
-import { scrollToMenuSection } from "../shared/scrollToMenu";
-import { mainNav } from "../shared/navigation/mainNav";
+import { mainNav, routes } from "../shared/navigation/mainNav";
+import { useMenuNavigation } from "../shared/navigation/useMenuNavigation";
 
 const sliderItems = [
   {
@@ -48,8 +48,6 @@ export function HomePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const location = useLocation();
-  const navigate = useNavigate();
 
   const { items } = useMenuItems();
   const { categories } = useMenuCategories();
@@ -84,27 +82,7 @@ export function HomePage() {
   const categoryTabs = categories.slice(0, 8);
   const sidebarLinks = mainNav;
 
-  const handleMenuNavigation = useCallback(
-    (event: MouseEvent<HTMLAnchorElement>, shouldCloseDrawer = false) => {
-      if (shouldCloseDrawer) {
-        setDrawerOpen(false);
-      }
-
-      if (location.pathname === "/") {
-        event.preventDefault();
-        window.history.replaceState(null, "", "/#menu");
-
-        if (!scrollToMenuSection("smooth")) {
-          navigate("/#menu");
-        }
-
-        return;
-      }
-
-      navigate("/#menu");
-    },
-    [location.pathname, navigate]
-  );
+  const navigateToMenu = useMenuNavigation();
 
   const handleSidebarItemClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>, to: string, shouldCloseDrawer = false) => {
@@ -112,11 +90,11 @@ export function HomePage() {
         setDrawerOpen(false);
       }
 
-      if (to === "/#menu") {
-        handleMenuNavigation(event, shouldCloseDrawer);
+      if (to === routes.menuHash) {
+        navigateToMenu(event);
       }
     },
-    [handleMenuNavigation]
+    [navigateToMenu]
   );
 
   return (
@@ -193,7 +171,7 @@ export function HomePage() {
                   <IconButton>⌕</IconButton>
                   <IconButton>◌</IconButton>
                   <Link
-                    to="/cart"
+                    to={routes.cart}
                     className="relative grid h-10 w-10 place-items-center rounded-full bg-[#FF6A00] text-black"
                     aria-label="Корзина"
                   >
@@ -395,7 +373,7 @@ export function HomePage() {
               <div className="text-sm text-[#A1A1A1]">{cartCount} товара</div>
               <div className="text-[24px] font-bold">{formatRub(cartTotal)}</div>
             </div>
-            <Link to="/checkout" className="rounded-[14px] bg-[#FF6A00] px-5 py-3 text-[15px] font-semibold text-white">
+            <Link to={routes.checkout} className="rounded-[14px] bg-[#FF6A00] px-5 py-3 text-[15px] font-semibold text-white">
               Оформить заказ
             </Link>
           </div>
