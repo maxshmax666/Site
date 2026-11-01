@@ -1,29 +1,9 @@
-# deps
-node_modules/
-
-# builds
-dist/
-build/
-
-# env
-.env
-.env.*
+node_modules
+.next
+out
+.env*
 !.env.example
-
-# logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 *.log
-
-# OS / editor
+*.tsbuildinfo
 .DS_Store
-.vscode/
-.idea/
-
-# misc
-*.tmp
-*.sh
-*.bash
-*.zsh
+coverage

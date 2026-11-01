@@ -1,228 +1,101 @@
-# Пицца Тагил — сайт (React + TS + Vite + Tailwind)
+# ATLAS Calculator · v0.3 (MVP)
 
-## Запуск
+Научный калькулятор + графики + инструменты + BYOAI (Bring Your Own AI): пользователь сам указывает провайдера, модель и собственный API-ключ. Сервер **не выполняет математику через AI**: модель формирует выражение, а результат вычисляется детерминированным движком.
+
+## Быстрый старт
+
+Требования: **Node.js 22+**, npm.
+
 ```bash
 npm install
+cp .env.example .env.local  # Windows PowerShell: Copy-Item .env.example .env.local
 npm run dev
 ```
 
-## Сборка
+Откройте http://localhost:3000
+
 ```bash
-npm run build
-npm run preview
-```
-
-## Тесты (unit/integration + e2e)
-
-Минимальные требования:
-- Node.js `>=18.18` (рекомендуется LTS 20+).
-- npm `>=9`.
-
-Стек тестирования:
-- Unit/integration: `Vitest ^2.1.1` + `@testing-library/react ^16.3.0` + `jsdom ^26.1.0`.
-- E2E: `Playwright ^1.55.0`.
-
-Первый запуск (локально):
-```bash
-npm install
-npx playwright install --with-deps chromium
-```
-
-Команды:
-```bash
-# Unit/integration тесты (hooks + API handlers)
-npm run test:unit
-
-# E2E тесты (с моками сети, без внешних API)
-npm run test:e2e
-
-# Полный прогон
 npm test
-
-# CI-режим (линейный репортер)
-npm run test:ci
-```
-
-Важно:
-- Тесты не требуют реального Supabase/внешней сети: используются фикстуры и моки ответов (`tests/fixtures/supabase.ts`, `tests/fixtures/network/menu.success.json`).
-- Для e2e `playwright.config.ts` поднимает локальный dev-server автоматически, а `tests/e2e/menu.spec.ts` мокает `/api/menu`.
-
-
-## Quality gate (lint + typecheck + test)
-
-Минимальные требования для локальной проверки качества:
-- Node.js `>=18.18` (в CI используется Node.js `20`).
-- ESLint `^9.34.0` + `typescript-eslint ^8.41.0` + `eslint-plugin-react-hooks ^5.2.0`.
-
-Команды перед PR:
-```bash
-npm run lint
 npm run typecheck
-npm run test:ci
+npm run build
+npm run start
 ```
 
-Что проверяется:
-- `lint`: React + TypeScript linting, включая `react-hooks/exhaustive-deps` и правила против unsafe TS-паттернов (`no-unsafe-*`, `no-floating-promises`, `no-explicit-any`).
-- `typecheck`: `tsc -b --noEmit` для всех TS project references.
-- `test`: unit/integration + e2e.
-
-Блокировка merge:
-- GitHub Actions workflow `.github/workflows/ci.yml` публикует проверку `CI / install → lint → typecheck → test`.
-- В Branch protection (или Rulesets) включите **Require status checks to pass before merging** и добавьте этот check как required.
-- Пока любой шаг (install/lint/typecheck/test) падает, merge должен оставаться заблокирован.
-
-## Cloudflare Pages (SPA)
-- Build command: `npm run build`
-- Output directory: `dist`
-- Functions directory: `functions` (Cloudflare Pages Functions enabled автоматически, если директория существует в репозитории)
-- Для Cloudflare Pages Functions используется `_routes.json`, чтобы ограничить запуск Worker только на `/api/*` и не проксировать статические ассеты через Functions.
-
-### API на Pages Functions
-
-В репозитории добавлены endpoint'ы:
-
-- `GET /api/health` → `{ "ok": true }`
-- `GET /api/menu` → JSON-меню (`categories` + `items`)
-- `GET /api/auth/me` → профиль текущего пользователя по `Authorization: Bearer <jwt>` или `401`
-
-Все endpoint'ы явно отвечают `content-type: application/json; charset=utf-8`.
-
-Для `GET /api/auth/me` в Cloudflare Pages нужно задать env vars:
-
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-
-Проверка после деплоя:
+Docker:
 
 ```bash
-curl -i https://tagil.pizza/api/health
-curl -i https://tagil.pizza/api/menu
-curl -i https://tagil.pizza/api/auth/me
+docker build -t atlas-calculator .
+docker run --rm -p 3000:3000 atlas-calculator
 ```
 
-Ожидаемо: JSON-ответы (без `<!doctype html>` в body).
+## Базовые возможности v0.2
 
-Пример `public/_routes.json`:
-```json
-{
-  "version": 1,
-  "include": ["/api/*"],
-  "exclude": []
-}
-```
+- Новый адаптивный интерфейс в тёмной палитре по дизайн-концепту ATLAS: верхняя навигация, переключатель режимов, центральная клавиатура, история и AI в правой колонке.
+- Рабочие режимы **Обычный / Научный / Графики**; графики `y = f(x)` вычисляются локальным безопасным парсером с защитой от чрезмерной сложности. Визуализация численная (не символьная); разрывы и асимптоты отображаются приблизительно.
+- **Четыре рабочих модуля**: конвертация единиц (длина, масса, температура, скорость), процентное изменение, оценка аннуитетного кредита, описательная статистика.
+- История и AI BYOK из v0.1 сохранены. Калькулятор и модули не требуют подключения AI.
+- Дополнительные модульные тесты; `npm test` — 12 тестов.
 
-## Категории меню (public + admin)
-- Категории и баннеры хранятся в таблице `public.menu_categories` (seed есть в `supabase_menu.sql`).
-- `public.menu_items.category` связан FK с `menu_categories.key`, поэтому у каждой позиции теперь обязательная валидная категория.
-- Чтобы добавить новую категорию: добавьте значение в enum `menu_category`, затем создайте запись в `menu_categories` (key/label/full_label/image_url/fallback_background/sort).
+## Что нового в v0.3
 
-- Runbook (безопасное добавление/переименование категорий без поломки legacy-данных):
-  1. Перед изменениями снимите распределение текущих ключей: `select category::text as category, count(*) from public.menu_items group by 1 order by 2 desc;`.
-  2. В `supabase_menu.sql` обновите mapping в блоке `case category::text ... end` (явно перечислите все legacy-ключи + fallback).
-  3. Выполните data-fix: `update public.menu_items set category = ... where category::text in (...);` с тем же mapping (миграция идемпотентна).
-  4. Только после data-fix меняйте/расширяйте enum `menu_category` и seed в `menu_categories` (key/label/full_label/image_url/fallback_background/sort).
-  5. Проверьте схему: `menu_items.category` имеет тип `menu_category`, а FK `menu_items_category_fkey` ссылается на `menu_categories(key)`.
-  6. Повторно выполните диагностический select и убедитесь, что остались только валидные enum-ключи.
+- **Конструктор формул**: создавайте собственные калькуляторы с 1–6 именованными переменными, безопасной проверкой выражения и локальным вычислением, без `eval`.
+- **Сохранённые проекты**: сохраняйте снимки текущего выражения и режима углов, открывайте их позднее.
+- **Импорт/экспорт JSON**: резервная копия локальных формул и проектов; API-ключи в неё не попадают. Импорт проверяется по схеме и заменяет текущий список только после подтверждения.
+- **AI-агент v0 (только чтение)**: модель выбирает один из 5 инструментов (`calculate`, `convert_units`, `percentage_change`, `loan_payment`, `statistics`), ATLAS валидирует параметры и локально выполняет вычисление. Произвольный код, shell, сеть и изменения файлов агенту недоступны.
+- **17 тестов** вместо 12.
 
-## Кейтеринг: форма + endpoint контракт
+**Ограничение:** проекты находятся в `localStorage` браузера, не синхронизируются между устройствами. Это не облачные проекты и не полноценный многошаговый агент. В режиме серверного AI вызов агентского инструмента осуществляется на сервере Next.js; в режиме прямого API — на устройстве пользователя.
 
-## Назначение первой admin-роли вручную
+## Как подключить AI
 
-После применения `supabase_admin.sql` назначение первой admin-роли выполняется **отдельно вручную** через `supabase_admin_role_grants.sql`.
+1. Нажмите **Подключить AI**.
+2. Выберите OpenAI, OpenRouter или Groq, введите **свой** API-ключ и ID доступной модели.
+3. Нажмите **Подключить**, задайте математический вопрос в поле AI и нажмите **Рассчитать с AI**.
+4. Смотрите предложенное выражение, объяснение и перепроверенный вычислителем результат. Кнопка **Перенести в калькулятор** копирует выражение в обычный редактор.
 
-Короткий runbook (в указанном порядке):
-1. Примените базовый SQL: `psql "$SUPABASE_DB_URL" -f supabase_admin.sql` (backfill + trigger для `public.profiles`).
-2. Откройте `supabase_admin_role_grants.sql` в SQL Editor, подставьте реальные `target_email` и `target_user_id` в CTE `params`, затем выполните скрипт.
-3. Проверьте результат вручную:
-   ```sql
-   select user_id, email, role
-   from public.profiles
-   where email = '<admin-email>';
-   ```
-   Ожидаемо: одна строка с `role = 'admin'`.
+**Custom OpenAI-compatible API**: выберите «Свой OpenAI-compatible API», режим **напрямую из браузера** и введите `https://llm.example.com/v1`. При таком режиме разрешён любой HTTPS адрес, запрос пойдёт напрямую, а ваш сервер AI должен настроить **CORS** для адреса калькулятора.
 
-⚠️ Важно по безопасности:
-- не храните реальные production email/UUID в репозитории;
-- перед запуском оператор должен вручную подставить целевые `email`/`user_id` в CTE `params`.
+Если CORS недоступен, используйте **через сервер сайта**: в `.env.local` укажите `AI_ALLOWED_ORIGINS=https://llm.example.com`, перезапустите сервер. Адрес должен использовать HTTPS и принадлежать разрешённому origin. Любой произвольный URL нельзя проксировать с публичного сервера (SSRF).
 
-Явный SQL (из runbook, с плейсхолдерами):
+**Локальный Ollama / LM Studio**: запустите сам сайт на `http://localhost:3000`, выберите свой API с режимом **напрямую из браузера**, URL `http://localhost:11434/v1`, модель — установленную локальную (например, `llama3.2`). API-ключ для локального Ollama может быть пустым. Настройте CORS на Ollama, например переменной окружения `OLLAMA_ORIGINS=http://localhost:3000`. С публичного HTTPS-сайта обращение к HTTP localhost обычно блокируется политиками браузера; для удалённого использования нужен HTTPS gateway или локальный агент.
 
-```sql
-begin;
+## Архитектура
 
-with params as (
-  select
-    'change-me-admin@example.com'::text as target_email,
-    '00000000-0000-0000-0000-000000000000'::uuid as target_user_id
-),
-upsert_from_email as (
-  insert into public.profiles(user_id, email, role)
-  select u.id, u.email, 'admin'::app_role
-  from auth.users u
-  join params p on u.email = p.target_email
-  on conflict (user_id) do update
-  set role = excluded.role,
-      email = excluded.email
-  returning user_id
-),
-update_from_uuid as (
-  update public.profiles p
-  set role = 'admin'::app_role
-  from params prm
-  where p.user_id = prm.target_user_id
-  returning p.user_id
-)
-select
-  (select count(*) from upsert_from_email) as granted_by_email,
-  (select count(*) from update_from_uuid) as granted_by_uuid;
+- `src/lib/graph.ts` — безопасная дискретизация функции через основной парсер, без `eval`.
+- `src/lib/modules.ts` — единицы измерения, проценты, кредиты, статистика.
+- `src/components/graph-workspace.tsx` и `src/components/tool-modules.tsx` — графики и модули.
+- `src/lib/workspace.ts` — модель данных сохранённых формул и проектов, валидация импорта, ограниченная подстановка переменных.
+- `src/lib/agent-tools.ts` — whitelist из 5 read-only инструментов, строгая валидация JSON-плана от AI, детерминированное исполнение.
+- `src/components/workspace-library.tsx` — UI конструктора и локальных проектов, импорт/экспорт.
+- `src/lib/calculator.ts` — независимый безопасный парсер арифметики, без `eval`; вход ограничен по размеру/сложности.
+- `src/components/calculator-workspace.tsx` — React UI, история в `localStorage`, конфигурация API-ключа только в памяти вкладки.
+- `src/lib/ai-providers.ts` — whitelist серверных провайдеров + разрешённые custom origins.
+- `src/lib/ai-protocol.ts` — единый формат Chat Completions для сервера и прямого подключения из браузера.
+- `src/app/api/ai/solve/route.ts` — Next.js серверный прокси к `/chat/completions` с таймаутом, валидацией и проверкой AI-выражения.
 
-commit;
-```
+**Конфиденциальность**: ключ не сохраняется в localStorage, базе или на сервере. При серверном режиме он передаётся на Next.js API route и далее AI-провайдеру **при каждом запросе**; при прямом режиме — **сразу в указанный API**, минуя сервер калькулятора. Не запускайте сайт на недоверенном сервере. История вычислений сохраняется локально в браузере.
 
-### Минимальные требования
-- Node.js: `>=18.18` (рекомендуется LTS 20+).
-- `@supabase/supabase-js`: `^2.93.3`.
-- Развернутый Supabase project (Database + Edge Functions).
+## Ограничения и технический долг
 
-### Что развернуть
-1. Применить SQL:
-   ```bash
-   # SQL файл в репозитории
-   psql "$SUPABASE_DB_URL" -f supabase_catering.sql
-   ```
-2. Задеплоить Edge Function:
-   ```bash
-   supabase functions deploy catering-request
-   ```
-3. Убедиться, что фронтенд получает `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`.
+- Нет учётных записей, синхронизации, оплаты и собственной базы данных — намеренно для MVP. **Оплаты сейчас нет**, платные функции и лимиты не реализованы.
+- Для публичного production-хостинга нужны аутентификация и rate limiting на AI API, мониторинг/алерты без логирования ключей, CSP, e2e-тесты.
+- При использовании кастомного шлюза допускайте только доверенные HTTPS origins; DNS-level SSRF защиту не стоит заменять простой проверкой имени (поэтому произвольные домены заблокированы).
+- Встроенная арифметика и кредитный модуль работают с `number` (IEEE-754), не годятся для финансовой точности и вычислений с длинной мантиссой. Следующий модуль — decimal/BigInt движок для финансовых сценариев.
+- В процентах `10% = 0.1`; для 10% от 200 введите `200*10%`.
+- Внутри `/api/ai/solve` используется стандарт Chat Completions; провайдеры с другим протоколом (например, нативный Anthropic) требуют адаптера.
 
-### Контракт `POST /functions/v1/catering-request`
+## Монетизация (план, ещё НЕ реализовано)
 
-Запрос (`application/json`):
-```json
-{
-  "name": "Иван",
-  "phone": "+79991234567",
-  "eventDateTime": "2026-02-07T15:00:00.000Z",
-  "guests": 30,
-  "comment": "Нужна доставка к 16:00"
-}
-```
+Для Free оставить калькулятор, графики, локальную историю, четыре модуля и Bring Your Own AI без оплаты. Монетизировать дополнительный результат: облачное хранение и совместную работу, пакетные расчёты, экспорт, формулы-проекты, профессиональные шаблоны и B2B API. Не монетизировать саму операцию сложения.
 
-Поля и ограничения:
-- `name`: обязательное, `1..80` символов.
-- `phone`: обязательное, формат `+79991234567` (допускаются скобки/пробелы/дефисы на входе, нормализуются).
-- `eventDateTime`: обязательное, ISO timestamp, минимум `+60 минут` от текущего момента.
-- `guests`: обязательное целое число, диапазон `1..5000`.
-- `comment`: опционально, до `1000` символов.
+Детальный план: [MONETIZATION.md](MONETIZATION.md).
 
-Ответы:
-- `200 { "ok": true }` — заявка сохранена.
-- `400` — ошибка валидации payload.
-- `429` — rate limit превышен (больше 3 заявок за 15 минут на один телефон).
-- `500` — внутренняя ошибка (БД/конфиг).
+## Следующие возможности
 
-### SLA и операционные ожидания
-- Целевой SLA ответа endpoint: `p95 < 700ms`, timeout клиента: `5s`.
-- Повтор отправки на фронте: только вручную пользователем (без автоповтора, чтобы не дублировать заявки).
-- Данные пишутся в `public.catering_requests`; публичных RLS policy на insert/read нет — запись только через service-role в Edge Function.
+Облачная синхронизация формул и проектов, точная десятичная арифметика финансов, облачная синхронизация, экспорт, полноценный графический движок с асимптотами, подключаемые AI-агенты и инструментальный API. Перед платными подписками — серверная авторизация, Stripe/Paddle вебхуки, учёт entitlements, rate-limiting и мониторинг затрат.
+
+Дизайн ориентирован на концепт ATLAS (изображение в исходном комплекте не включено ради размера репозитория).
+
+## Проверка сборки
+
+`npm test` — 17/17. Для TypeScript typecheck и полноценной Next.js сборки требуется `npm install`. Если npm registry недоступен, зависимости не установятся и проверки не выполнятся — это ограничение среды, а не сигнал об успешной сборке.
