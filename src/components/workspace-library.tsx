@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { calculate, type AngleUnit } from "@/lib/calculator";
+import { FORMULA_PRESETS } from "@/lib/formula-presets";
 import {
   EMPTY_WORKSPACE, evaluateFormula, normalizeVariables, validateFormula,
   validateWorkspace, type WorkspaceData,
@@ -117,6 +118,7 @@ export function WorkspaceLibrary({ expression, angle, onLoad }: {
       {tab === "formulas" ? <div className="studio-grid">
         <form className="studio-form" onSubmit={saveFormula}>
           <h3>Новый калькулятор</h3><p>Задайте формулу и переменные, которые пользователь сможет менять. Поддерживаются функции научного калькулятора.</p>
+          <div className="preset-list" role="group" aria-label="Готовые шаблоны формул">{FORMULA_PRESETS.map((preset) => <button key={preset.id} type="button" onClick={() => { setFormulaName(preset.name); setFormulaExpression(preset.expression); setVariableText(preset.variables.join(", ")); setFormulaResult(""); success(`Шаблон «${preset.name}» загружен. Настройте его и сохраните.`); }}>{preset.name}</button>)}</div>
           <label>Название<input maxLength={60} placeholder="Выручка после скидки" value={formulaName} onChange={(e) => setFormulaName(e.target.value)} required /></label>
           <label>Формула<input maxLength={180} spellCheck={false} placeholder="price*qty*(1-discount/100)" value={formulaExpression} onChange={(e) => setFormulaExpression(e.target.value)} required /></label>
           <label>Переменные через запятую<input maxLength={100} spellCheck={false} placeholder="price, qty, discount" value={variableText} onChange={(e) => setVariableText(e.target.value)} required /></label>

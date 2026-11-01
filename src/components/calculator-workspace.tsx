@@ -68,6 +68,7 @@ export function CalculatorWorkspace() {
   const [mode, setMode] = useState<"basic" | "scientific" | "graph">("scientific");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loadedHistory, setLoadedHistory] = useState(false);
+  const [loadedDraft, setLoadedDraft] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [config, setConfig] = useState<Connection>({
@@ -97,6 +98,25 @@ export function CalculatorWorkspace() {
     } catch { /* corrupted local storage: start with empty history */ }
     setLoadedHistory(true);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw: unknown = JSON.parse(localStorage.getItem("atlas-draft-v1") ?? "null");
+      if (raw && typeof raw === "object") {
+        const item = raw as Record<string, unknown>;
+        if (typeof item.expression === "string" && item.expression.length <= 220) setExpression(item.expression);
+        if (item.angle === "deg" || item.angle === "rad") setAngle(item.angle);
+        if (item.mode === "basic" || item.mode === "scientific" || item.mode === "graph") setMode(item.mode);
+      }
+    } catch { /* invalid draft: use initial defaults */ }
+    setLoadedDraft(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loadedDraft) return;
+    try { localStorage.setItem("atlas-draft-v1", JSON.stringify({ expression, angle, mode })); }
+    catch { /* private browsing or storage disabled */ }
+  }, [expression, angle, mode, loadedDraft]);
 
   useEffect(() => {
     if (!loadedHistory) return;
@@ -294,7 +314,7 @@ export function CalculatorWorkspace() {
   return (
     <div className="atlas-app">
       <header className="atlas-header">
-        <div className="brand"><span className="brand-glyph" aria-hidden="true">△</span><span className="brand-name">ATLAS <span>Calculator</span></span><span className="version-pill">v0.3</span></div>
+        <div className="brand"><span className="brand-glyph" aria-hidden="true">△</span><span className="brand-name">ATLAS <span>Calculator</span></span><span className="version-pill">v0.3.1</span></div>
         <nav className="top-navigation" aria-label="Основная навигация">
           <button className="nav-active" type="button" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}><BadgeIcon kind="bolt" /> Калькулятор</button>
           <button type="button" onClick={() => document.getElementById("modules")?.scrollIntoView({ behavior: "smooth" })}>▦ <span>Модули</span></button>
